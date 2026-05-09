@@ -1,0 +1,19 @@
+Checks: >
+  clang-analyzer-*,
+  bugprone-*,
+  cert-*,
+  portability-*,
+  readability-identifier-naming,
+  readability-misleading-indentation,
+  performance-type-promotion-in-math-fn,
+  performance-no-int-to-ptr  
+
+  # noisy or C++-specific checks disabled
+  -cert-dcl50-cpp,
+  -cert-err58-cpp,
+  -bugprone-narrowing-conversions,
+  -bugprone-easily-swappable-parameters
+
+WarningsAsErrors: ""
+HeaderFilterRegex: ".*"
+FormatStyle: none
