@@ -9,7 +9,7 @@
 
 static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};
 
-typedef enum GameState { Playing, Game_Over } GameState;
+typedef enum GameState { MENU, PLAYING, GAME_OVER } GameState;
 
 typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O, CELL_DRAW } CellState;
 typedef struct Cell {
@@ -39,7 +39,7 @@ uint8_t CalcBigGridState(BigGrid* grid) {
   }
   for (int player = 0; player < 2; player++) {
     for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if (player_pattern[player] == cell_patterns[pat]) {
+      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
         return player + 1;
       }
     }
@@ -64,7 +64,7 @@ void CalcSmallGridState(SmallGrid* grid) {
   }
   for (int player = 0; player < 2; player++) {
     for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if (player_pattern[player] == cell_patterns[pat]) {
+      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
         grid->state = player + 1;
       }
     }
@@ -110,7 +110,24 @@ void DrawGameArea(BigGrid* grid, Rectangle game_area_rect, int turn_area) {
           (turn_area < 0 && grid->grids[b_row * 3 + b_col].state != CELL_EMPTY)) {
         DrawRectangleRec(small_grid_rect, ColorAlpha(BLACK, 0.15));
       }
-      DrawTTTShape(scale_rect(small_grid_rect, 0.9));
+      small_grid_rect = scale_rect(small_grid_rect, 0.9);
+      DrawTTTShape(small_grid_rect);
+      SmallGrid small_grid = grid->grids[b_row * 3 + b_col];
+      float small_grid_line_thickness = small_grid_size / 50 * 0.9;
+      if (small_grid.state == CELL_X) {
+        DrawLineEx((Vector2){small_grid_rect.x, small_grid_rect.y},
+                   (Vector2){small_grid_rect.x + small_grid_rect.width,
+                             small_grid_rect.y + small_grid_rect.height},
+                   small_grid_rect.height / 10, RED);
+        DrawLineEx((Vector2){small_grid_rect.x, small_grid_rect.y + small_grid_rect.height},
+                   (Vector2){small_grid_rect.x + small_grid_rect.width, small_grid_rect.y},
+                   small_grid_rect.height / 10, RED);
+      } else if (small_grid.state == CELL_O) {
+        DrawRing((Vector2){small_grid_rect.x + small_grid_rect.width / 2,
+                           small_grid_rect.y + small_grid_rect.height / 2},
+                 small_grid_rect.width / 2 - big_grid_line_thickness, small_grid_rect.width / 2, 0,
+                 360, 64, BLUE);
+      }
     }
   }
 }
@@ -136,7 +153,9 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
         }
         grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
         *player = (*player + 1) % 2;
-        CalcSmallGridState(&grid->grids[b_row * 3 + b_col]);
+        if (grid->grids[b_row * 3 + b_col].state == CELL_EMPTY) {
+          CalcSmallGridState(&grid->grids[b_row * 3 + b_col]);
+        }
         if (grid->grids[s_row * 3 + s_col].state == CELL_EMPTY) {
           *turn_area = s_row * 3 + s_col;
         } else {
@@ -204,10 +223,9 @@ void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
                          (Vector2){cell_rect.x + cell_rect.width, cell_rect.y},
                          cell_rect.height / 10, RED);
             } else if (cell_state == CELL_O) {
-              DrawCircle(cell_rect.x + cell_rect.width / 2, cell_rect.y + cell_rect.height / 2,
-                         cell_rect.width / 2, BLUE);
-              DrawCircle(cell_rect.x + cell_rect.width / 2, cell_rect.y + cell_rect.height / 2,
-                         cell_rect.width / 2 - shape_thickness, WHITE);
+              DrawRing(
+                  (Vector2){cell_rect.x + cell_rect.width / 2, cell_rect.y + cell_rect.height / 2},
+                  cell_rect.width / 2 - shape_thickness, cell_rect.width / 2, 0, 360, 64, BLUE);
             }
           }
         }
@@ -215,6 +233,34 @@ void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
     }
   }
 }
+
+// void RenderMenu(GameState* g_state, bool* settings, const Vector2 screen_size) {
+//   float left_padding = screen_size.x * 23 / 270;
+//   Vector2 button_size = {screen_size.x * 41 / 90, screen_size.y * 5 / 36};
+//   float outer_padding = screen_size.y * 2 / 25;
+
+//   if (GuiButton(
+//           (Rectangle){left_padding, screen_size.y * 109 / 360, button_size.x / 2, button_size.y},
+//           "SinglePlayer"))
+//     *g_state = playing;
+//   if (GuiButton((Rectangle){left_padding + button_size.x / 2, screen_size.y * 109 / 360,
+//                             button_size.x / 2, button_size.y},
+//                 "MultiPlayer"))
+//     *g_state = playing;
+//   if (GuiButton((Rectangle){left_padding, screen_size.y * 41 / 90, button_size.x, button_size.y},
+//                 "Settings"))
+//     *settings = !*settings;
+//   if (GuiButton((Rectangle){left_padding, screen_size.y - outer_padding - button_size.y,
+//                             button_size.x, button_size.y},
+//                 "Exit"))
+//     *g_state = exit;
+//   Vector2 settings_box = {screen_size.x * 9 / 16, screen_size.y - outer_padding * 2};
+//   if (*settings)
+//     if (GuiButton(
+//             (Rectangle){screen_size.x * 41 / 90, outer_padding, settings_box.x, settings_box.y},
+//             "S")) {
+//     }
+// }
 
 int main(void) {
   InitWindow(800, 800, "MegaTicTacToe");
@@ -225,27 +271,33 @@ int main(void) {
   BigGrid grid = {0};
   uint8_t player = 0;
   int turn_area = -1;
-  GameState game_state = Playing;
+  GameState game_state = PLAYING;
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
     switch (game_state) {
-      case Playing:
-        // Game logic here
+      case MENU:
+        BeginDrawing();
+        ClearBackground(BLACK);  // IMPORTANT
+        // RenderMenu(&g_state, &settings, screen_size);
+        EndDrawing();
         break;
-      case Game_Over:
-        // Game over logic here
+      case PLAYING:
+        OnMouseClick(&grid, game_area_rect, &player, &turn_area);
+        BeginDrawing();
+        ClearBackground(WHITE);
+        DrawTurns(&grid, game_area_rect);
+        DrawGameArea(&grid, game_area_rect, turn_area);
+        EndDrawing();
+        break;
+      case GAME_OVER:
+        BeginDrawing();
+        const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
+                          : CalcBigGridState(&grid) == CELL_O ? "O wins!"
+                                                              : "";
+        DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, GOLD);
+        EndDrawing();
         break;
     }
-    OnMouseClick(&grid, game_area_rect, &player, &turn_area);
-    BeginDrawing();
-    ClearBackground(WHITE);
-    DrawTurns(&grid, game_area_rect);
-    DrawGameArea(&grid, game_area_rect, turn_area);
-    const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
-                      : CalcBigGridState(&grid) == CELL_O ? "O wins!"
-                                                          : "";
-    DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 10, 60, GOLD);
-    EndDrawing();
   }
   CloseWindow();
   return 0;
