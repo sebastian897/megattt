@@ -96,7 +96,7 @@ void DrawTTTShape(Rectangle rect) {
   }
 }
 
-void DrawGameArea(Rectangle game_area_rect, int turn_area) {
+void DrawGameArea(BigGrid* grid, Rectangle game_area_rect, int turn_area) {
   DrawTTTShape(game_area_rect);
   float big_grid_line_thickness = game_area_rect.height / 50;
   float small_grid_size = (game_area_rect.width - big_grid_line_thickness * 2) / 3;
@@ -106,7 +106,8 @@ void DrawGameArea(Rectangle game_area_rect, int turn_area) {
           (Rectangle){game_area_rect.x + b_col * (small_grid_size + big_grid_line_thickness),
                       game_area_rect.y + b_row * (small_grid_size + big_grid_line_thickness),
                       small_grid_size, small_grid_size};
-      if (turn_area >= 0 && turn_area != b_row * 3 + b_col) {
+      if ((turn_area >= 0 && turn_area != b_row * 3 + b_col) ||
+          (turn_area < 0 && grid->grids[b_row * 3 + b_col].state != CELL_EMPTY)) {
         DrawRectangleRec(small_grid_rect, ColorAlpha(BLACK, 0.15));
       }
       DrawTTTShape(scale_rect(small_grid_rect, 0.9));
@@ -157,6 +158,9 @@ void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, uint8_t* player, int*
   if (*turn_area < 0) {
     for (int b_col = 0; b_col < 3; b_col++) {
       for (int b_row = 0; b_row < 3; b_row++) {
+        if (grid->grids[b_row * 3 + b_col].state != CELL_EMPTY) {
+          continue;
+        }
         DetectClickInArea(grid, game_area_rect, selected_pos, big_grid_line_thickness,
                           small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row,
                           player, turn_area);
@@ -236,7 +240,7 @@ int main(void) {
     BeginDrawing();
     ClearBackground(WHITE);
     DrawTurns(&grid, game_area_rect);
-    DrawGameArea(game_area_rect, turn_area);
+    DrawGameArea(&grid, game_area_rect, turn_area);
     const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
                       : CalcBigGridState(&grid) == CELL_O ? "O wins!"
                                                           : "";
