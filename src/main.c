@@ -3,13 +3,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "raygui.h"
 #include "raymath.h"
 
 #define ARRAY_LENGTH(x) ((int)(sizeof(x) / sizeof((x)[0])))
 
 static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};
 
-typedef enum GameState { MENU, PLAYING, GAME_OVER } GameState;
+typedef enum GameState { MENU, PLAYING, GAME_OVER, EXIT } GameState;
 
 typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O, CELL_DRAW } CellState;
 typedef struct Cell {
@@ -108,12 +109,11 @@ void DrawGameArea(BigGrid* grid, Rectangle game_area_rect, int turn_area) {
                       small_grid_size, small_grid_size};
       if ((turn_area >= 0 && turn_area != b_row * 3 + b_col) ||
           (turn_area < 0 && grid->grids[b_row * 3 + b_col].state != CELL_EMPTY)) {
-        DrawRectangleRec(small_grid_rect, ColorAlpha(BLACK, 0.15));
+        DrawRectangleRec(small_grid_rect, ColorAlpha(BLACK, 0.2));
       }
       small_grid_rect = scale_rect(small_grid_rect, 0.9);
       DrawTTTShape(small_grid_rect);
       SmallGrid small_grid = grid->grids[b_row * 3 + b_col];
-      float small_grid_line_thickness = small_grid_size / 50 * 0.9;
       if (small_grid.state == CELL_X) {
         DrawLineEx((Vector2){small_grid_rect.x, small_grid_rect.y},
                    (Vector2){small_grid_rect.x + small_grid_rect.width,
@@ -147,10 +147,6 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
                              small_grid_rect.y + s_row * (cell_size + small_grid_line_thickness),
                              cell_size, cell_size};
       if (CheckCollisionPointRec(selected_pos, cell_rect)) {
-        bool belend = false;
-        if (IsKeyDown(KEY_LEFT_SHIFT)) {
-          belend = true;
-        }
         grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
         *player = (*player + 1) % 2;
         if (grid->grids[b_row * 3 + b_col].state == CELL_EMPTY) {
@@ -234,33 +230,18 @@ void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
   }
 }
 
-// void RenderMenu(GameState* g_state, bool* settings, const Vector2 screen_size) {
-//   float left_padding = screen_size.x * 23 / 270;
-//   Vector2 button_size = {screen_size.x * 41 / 90, screen_size.y * 5 / 36};
-//   float outer_padding = screen_size.y * 2 / 25;
+void RenderMenu(GameState* g_state, const Vector2 window_size) {
+  float padding = window_size.x * 23 / 270;
+  Vector2 button_size = {window_size.x - padding * 2, window_size.y * 5 / 36};
 
-//   if (GuiButton(
-//           (Rectangle){left_padding, screen_size.y * 109 / 360, button_size.x / 2, button_size.y},
-//           "SinglePlayer"))
-//     *g_state = playing;
-//   if (GuiButton((Rectangle){left_padding + button_size.x / 2, screen_size.y * 109 / 360,
-//                             button_size.x / 2, button_size.y},
-//                 "MultiPlayer"))
-//     *g_state = playing;
-//   if (GuiButton((Rectangle){left_padding, screen_size.y * 41 / 90, button_size.x, button_size.y},
-//                 "Settings"))
-//     *settings = !*settings;
-//   if (GuiButton((Rectangle){left_padding, screen_size.y - outer_padding - button_size.y,
-//                             button_size.x, button_size.y},
-//                 "Exit"))
-//     *g_state = exit;
-//   Vector2 settings_box = {screen_size.x * 9 / 16, screen_size.y - outer_padding * 2};
-//   if (*settings)
-//     if (GuiButton(
-//             (Rectangle){screen_size.x * 41 / 90, outer_padding, settings_box.x, settings_box.y},
-//             "S")) {
-//     }
-// }
+  if (GuiButton((Rectangle){padding, window_size.y * 109 / 360, button_size.x, button_size.y},
+                "Play"))
+    *g_state = PLAYING;
+  if (GuiButton((Rectangle){padding, window_size.y * 109 / 360 + padding + button_size.y,
+                            button_size.x, button_size.y},
+                "Exit"))
+    *g_state = EXIT;
+}
 
 int main(void) {
   InitWindow(800, 800, "MegaTicTacToe");
@@ -271,14 +252,14 @@ int main(void) {
   BigGrid grid = {0};
   uint8_t player = 0;
   int turn_area = -1;
-  GameState game_state = PLAYING;
+  GameState game_state = MENU;
   SetTargetFPS(60);
-  while (!WindowShouldClose()) {
+  while (!WindowShouldClose() && game_state != EXIT) {
     switch (game_state) {
       case MENU:
         BeginDrawing();
-        ClearBackground(BLACK);  // IMPORTANT
-        // RenderMenu(&g_state, &settings, screen_size);
+        ClearBackground(BLACK);
+        RenderMenu(&game_state, window_size);
         EndDrawing();
         break;
       case PLAYING:
@@ -296,6 +277,8 @@ int main(void) {
                                                               : "";
         DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, GOLD);
         EndDrawing();
+        break;
+      case EXIT:
         break;
     }
   }
