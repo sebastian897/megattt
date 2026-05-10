@@ -9,8 +9,9 @@
 
 static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};
 
-typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O } CellState;
+typedef enum GameState { Playing, Game_Over } GameState;
 
+typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O, CELL_DRAW } CellState;
 typedef struct Cell {
   CellState state;
 } Cell;
@@ -44,7 +45,7 @@ uint8_t CalcBigGridState(BigGrid* grid) {
     }
   }
   if (player_count[0] + player_count[1] == 9) {
-    return (player_count[0] < player_count[1]) + 1;
+    return CELL_DRAW;
   }
   return CELL_EMPTY;
 }
@@ -69,7 +70,7 @@ void CalcSmallGridState(SmallGrid* grid) {
     }
   }
   if (grid->state == CELL_EMPTY && player_count[0] + player_count[1] == 9) {
-    grid->state = (player_count[0] < player_count[1]) + 1;
+    grid->state = CELL_DRAW;
   }
 }
 
@@ -128,9 +129,18 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
                              small_grid_rect.y + s_row * (cell_size + small_grid_line_thickness),
                              cell_size, cell_size};
       if (CheckCollisionPointRec(selected_pos, cell_rect)) {
+        bool belend = false;
+        if (IsKeyDown(KEY_LEFT_SHIFT)) {
+          belend = true;
+        }
         grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
         *player = (*player + 1) % 2;
-        *turn_area = s_row * 3 + s_col;
+        CalcSmallGridState(&grid->grids[b_row * 3 + b_col]);
+        if (grid->grids[s_row * 3 + s_col].state == CELL_EMPTY) {
+          *turn_area = s_row * 3 + s_col;
+        } else {
+          *turn_area = -1;
+        }
       }
     }
   }
@@ -202,12 +212,6 @@ void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
   }
 }
 
-void CalcMoveState(BigGrid* grid) {
-  for (int i = 0; i < 9; i++) {
-    if (grid->grids[i].state == CELL_EMPTY) CalcSmallGridState(&grid->grids[i]);
-  }
-}
-
 int main(void) {
   InitWindow(800, 800, "MegaTicTacToe");
   Vector2 window_size = {GetMonitorHeight(GetCurrentMonitor()) * 0.8,
@@ -217,18 +221,26 @@ int main(void) {
   BigGrid grid = {0};
   uint8_t player = 0;
   int turn_area = -1;
+  GameState game_state = Playing;
   SetTargetFPS(60);
   while (!WindowShouldClose()) {
-    CalcMoveState(&grid);
+    switch (game_state) {
+      case Playing:
+        // Game logic here
+        break;
+      case Game_Over:
+        // Game over logic here
+        break;
+    }
     OnMouseClick(&grid, game_area_rect, &player, &turn_area);
     BeginDrawing();
     ClearBackground(WHITE);
-    DrawGameArea(game_area_rect, turn_area);
     DrawTurns(&grid, game_area_rect);
-    // const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
-    //                   : CalcBigGridState(&grid) == CELL_O ? "O wins!"
-    //                                                       : "Not won yet!";
-    // DrawText(msg, 10, 10, 20, BLACK);
+    DrawGameArea(game_area_rect, turn_area);
+    const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
+                      : CalcBigGridState(&grid) == CELL_O ? "O wins!"
+                                                          : "";
+    DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 10, 60, GOLD);
     EndDrawing();
   }
   CloseWindow();
