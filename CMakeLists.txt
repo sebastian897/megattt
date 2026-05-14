@@ -37,8 +37,11 @@ add_library(raygui INTERFACE)
 target_include_directories(raygui INTERFACE ${raygui_SOURCE_DIR}/src)
 
 add_executable(megattt
-  src/main.c
+  src/client.c
   src/raygui_impl.c
+)
+add_executable(megattt-server
+  src/server.c
 )
 
 target_link_libraries(megattt PRIVATE raylib raygui)
