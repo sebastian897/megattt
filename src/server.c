@@ -122,6 +122,12 @@ void Accept(void) {
     buf[bytes_received] = '\0';
     printf("Received: %s\n", buf);
   }
+  ssize_t err = send(client_fd, "oi oi", 6, 0);
+  printf("Server: Error from bytes sent: %ld", err);
+  if (err == SOCKET_ERROR) {
+    perror("server: send failed");
+    exit(1);
+  }
 }
 
 void Broadcast(char* buf, int size) {
@@ -274,4 +280,5 @@ void CalcSmallGridState(SmallGrid* grid) {
 int main() {
   ServerInit();
   Accept();
+  close(sock);
 };

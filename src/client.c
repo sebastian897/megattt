@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #include "client_net.h"
 #include "common.h"
@@ -181,6 +183,8 @@ int main(void) {
   ClientInit();
   const char msg[] = "hello";
   Send(msg, sizeof(msg));
+
+  ClientReceive();
   exit(0);
   InitWindow(800, 800, "MegaTicTacToe");
   Vector2 window_size = {GetMonitorHeight(GetCurrentMonitor()) * 0.8,

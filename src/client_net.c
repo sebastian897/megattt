@@ -1,5 +1,6 @@
 #include "client_net.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,11 +13,11 @@ WSADATA wsa;
 #endif
 static SOCKET sock;
 static struct sockaddr_in server_adr;
-#ifdef WIN32
-static int slen = sizeof(client);
-#else
-static socklen_t slen = sizeof(server_adr);
-#endif
+// #ifdef WIN32
+// static int slen = sizeof(client);
+// #else
+// static socklen_t slen = sizeof(server_adr);
+// #endif
 char buf[BUFLEN];
 
 void ClientInit(void) {
@@ -52,6 +53,7 @@ void ClientInit(void) {
 
 void Send(const char* msg, int size) {
   // Send message
+  printf("sending messgage: %s\n", msg);
   if (send(sock, msg, size, 0) == SOCKET_ERROR) {
     printf("Client: sendto() failed: %d\n", WSAGetLastError());
     closesocket(sock);
@@ -63,19 +65,18 @@ void Send(const char* msg, int size) {
 }
 
 void ClientReceive(void) {
-  // Receive response
-  int recv_len = recvfrom(sock, buf, BUFLEN - 1, 0, (struct sockaddr*)&server_adr, &slen);
-  if (recv_len == SOCKET_ERROR) {
-    printf("Client: recvfrom() failed: %d\n", WSAGetLastError());
-    closesocket(sock);
-#ifdef WIN32
-    WSACleanup();
-#endif
-    exit(1);
+  printf("Client: Waiting for msg \n");
+  while (true) {
+    ssize_t bytes_received = recv(sock, buf, BUFLEN - 1, 0);
+    if (bytes_received < 0) {
+      perror("recv failed");
+      exit(1);
+    } else if (bytes_received > 0) {
+      buf[bytes_received] = '\0';
+      printf("Received: %s\n", buf);
+      break;
+    }
   }
-
-  buf[recv_len] = '\0';
-  // printf("Client: Server reply: %s\n", buf);
 }
 
 void ClientShutdown(void) {
