@@ -18,11 +18,6 @@
 #include "common.h"
 #include "winsock_compat.h"
 
-#define SERVER "192.168.40.85"
-#define PORT 5150
-#define BUFLEN 1024
-#define PLAYERS_MAX 2
-
 #define ARRAY_LENGTH(x) ((int)(sizeof(x) / sizeof((x)[0])))
 
 static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};

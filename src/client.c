@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "client_net.h"
 #include "common.h"
 #include "raygui.h"
 #include "raymath.h"
@@ -177,6 +178,9 @@ void RenderMenu(GameState* g_state, const Vector2 window_size) {
 }
 
 int main(void) {
+  ClientInit();
+  const char msg[] = "hello";
+  Send(msg, sizeof(msg));
   exit(0);
   InitWindow(800, 800, "MegaTicTacToe");
   Vector2 window_size = {GetMonitorHeight(GetCurrentMonitor()) * 0.8,

@@ -38,6 +38,7 @@ target_include_directories(raygui INTERFACE ${raygui_SOURCE_DIR}/src)
 
 add_executable(megattt
   src/client.c
+  src/client_net.c
   src/raygui_impl.c
 )
 add_executable(megattt-server
