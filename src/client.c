@@ -1,79 +1,11 @@
-#include <math.h>
 #include <raylib.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "raygui.h"
 #include "raymath.h"
+#include "common.h"
 
-#define ARRAY_LENGTH(x) ((int)(sizeof(x) / sizeof((x)[0])))
-
-static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};
-
-typedef enum GameState { MENU, PLAYING, GAME_OVER, EXIT } GameState;
-
-typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O, CELL_DRAW } CellState;
-typedef struct Cell {
-  CellState state;
-} Cell;
-
-typedef struct SmallGrid {
-  Cell cells[9];
-  CellState state;
-} SmallGrid;
-
-typedef struct BigGrid {
-  SmallGrid grids[9];
-} BigGrid;
-
-uint8_t CalcBigGridState(BigGrid* grid) {
-  uint16_t player_pattern[2] = {0, 0};
-  uint8_t player_count[2] = {0};
-  for (int c = 0; c < 9; c++) {
-    if (grid->grids[c].state == CELL_X) {
-      player_pattern[0] += pow(2, c);
-      player_count[0] += 1;
-    } else if (grid->grids[c].state == CELL_O) {
-      player_pattern[1] += pow(2, c);
-      player_count[1] += 1;
-    }
-  }
-  for (int player = 0; player < 2; player++) {
-    for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
-        return player + 1;
-      }
-    }
-  }
-  if (player_count[0] + player_count[1] == 9) {
-    return CELL_DRAW;
-  }
-  return CELL_EMPTY;
-}
-
-void CalcSmallGridState(SmallGrid* grid) {
-  uint16_t player_pattern[2] = {0, 0};
-  uint8_t player_count[2] = {0};
-  for (int c = 0; c < 9; c++) {
-    if (grid->cells[c].state == CELL_X) {
-      player_pattern[0] += pow(2, c);
-      player_count[0] += 1;
-    } else if (grid->cells[c].state == CELL_O) {
-      player_pattern[1] += pow(2, c);
-      player_count[1] += 1;
-    }
-  }
-  for (int player = 0; player < 2; player++) {
-    for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
-        grid->state = player + 1;
-      }
-    }
-  }
-  if (grid->state == CELL_EMPTY && player_count[0] + player_count[1] == 9) {
-    grid->state = CELL_DRAW;
-  }
-}
 
 Rectangle scale_rect(Rectangle rect, float scale) {
   float new_width = rect.width * scale;
@@ -150,7 +82,8 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
         grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
         *player = (*player + 1) % 2;
         if (grid->grids[b_row * 3 + b_col].state == CELL_EMPTY) {
-          CalcSmallGridState(&grid->grids[b_row * 3 + b_col]);
+          // send packet to server
+          // CalcSmallGridState(&grid->grids[b_row * 3 + b_col]);
         }
         if (grid->grids[s_row * 3 + s_col].state == CELL_EMPTY) {
           *turn_area = s_row * 3 + s_col;
@@ -272,10 +205,10 @@ int main(void) {
         break;
       case GAME_OVER:
         BeginDrawing();
-        const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
-                          : CalcBigGridState(&grid) == CELL_O ? "O wins!"
-                                                              : "";
-        DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, GOLD);
+        // const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
+        //                   : CalcBigGridState(&grid) == CELL_O ? "O wins!"
+        //                                                       : "";
+        // DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, GOLD);
         EndDrawing();
         break;
       case EXIT:
