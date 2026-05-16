@@ -42,6 +42,7 @@ add_executable(megattt
 )
 add_executable(megattt-server
   src/server.c
+  src/buffer_control.c
 )
 
 target_link_libraries(megattt PRIVATE raylib raygui)

@@ -1,25 +1,31 @@
+// #include "server.h"
+
+#include <arpa/inet.h>
 #include <bits/types.h>
-#include <math.h>
+#include <bits/types/struct_timeval.h>
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "buffer_control.h"
 #include "common.h"
 #include "winsock_compat.h"
 
-#define SERVER "192.168.40.98"
+#define SERVER "192.168.40.85"
 #define PORT 5150
+#define BUFLEN 1024
+#define PLAYERS_MAX 2
 
 #define ARRAY_LENGTH(x) ((int)(sizeof(x) / sizeof((x)[0])))
 
 static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};
-
-#define PLAYERS_MAX 2
-
-#define BUFLEN 1024
 
 typedef struct client {
   struct sockaddr_in addr;
@@ -51,7 +57,7 @@ void ServerInit(void) {
 #endif
 
   // Create UDP socket
-  sock = socket(AF_INET, SOCK_DGRAM, 0);
+  sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock == INVALID_SOCKET) {
     printf("Server: Socket creation failed: %d\n", WSAGetLastError());
 #ifdef WIN32
@@ -82,7 +88,14 @@ void ServerInit(void) {
     exit(1);
   }
 
-  printf("Server: Waiting for UDP packet on port %s:%d...\n", ip_str, PORT);
+  printf("Server: Waiting for TCP packet on port %s:%d...\n", ip_str, PORT);
+
+  // Start listening
+  if (listen(sock, 5) < 0) {
+    perror("listen failed");
+    close(sock);
+    exit(EXIT_FAILURE);
+  }
 }
 
 void ServerShutdown(void) {
@@ -90,6 +103,30 @@ void ServerShutdown(void) {
 #ifdef WIN32
   WSACleanup();
 #endif
+}
+
+void Accept(void) {
+  // Accept one client connection
+  struct sockaddr_in address;
+  socklen_t addrlen = sizeof(address);
+  int client_fd = accept(sock, (struct sockaddr*)&address, &addrlen);
+  if (client_fd < 0) {
+    perror("accept failed");
+    close(sock);
+    exit(EXIT_FAILURE);
+  }
+
+  char addr_buf[50];
+  inet_ntop(AF_INET, &address.sin_addr.s_addr, addr_buf, 50);
+  printf("Client connected from %s\n", addr_buf);
+  // Receive data
+  ssize_t bytes_received = recv(client_fd, buf, BUFLEN - 1, 0);
+  if (bytes_received < 0) {
+    perror("recv failed");
+  } else {
+    buf[bytes_received] = '\0';
+    printf("Received: %s\n", buf);
+  }
 }
 
 void Broadcast(char* buf, int size) {
@@ -157,7 +194,7 @@ int ReceiveMultiple(void) {
   // Set timeout
   struct timeval timeout;
   timeout.tv_sec = 0;
-  timeout.tv_usec = SILENCE_TIMEOUT_MS * 1000;  // convert ms to µs
+  timeout.tv_usec = SILENCE_TIMEOUT_MS * 1000;  // NOLINT convert ms to µs
 
   // Collect packets until no activity for SILENCE_TIMEOUT_MS
   while (1) {
@@ -195,10 +232,10 @@ uint8_t CalcBigGridState(BigGrid* grid) {
   uint8_t player_count[2] = {0};
   for (int c = 0; c < 9; c++) {
     if (grid->grids[c].state == CELL_X) {
-      player_pattern[0] += pow(2, c);
+      player_pattern[0] += 1 << c;
       player_count[0] += 1;
     } else if (grid->grids[c].state == CELL_O) {
-      player_pattern[1] += pow(2, c);
+      player_pattern[1] += 1 << c;
       player_count[1] += 1;
     }
   }
@@ -220,10 +257,10 @@ void CalcSmallGridState(SmallGrid* grid) {
   uint8_t player_count[2] = {0};
   for (int c = 0; c < 9; c++) {
     if (grid->cells[c].state == CELL_X) {
-      player_pattern[0] += pow(2, c);
+      player_pattern[0] += 1 << c;
       player_count[0] += 1;
     } else if (grid->cells[c].state == CELL_O) {
-      player_pattern[1] += pow(2, c);
+      player_pattern[1] += 1 << c;
       player_count[1] += 1;
     }
   }
@@ -240,5 +277,6 @@ void CalcSmallGridState(SmallGrid* grid) {
 }
 
 int main() {
-
+  ServerInit();
+  Accept();
 };

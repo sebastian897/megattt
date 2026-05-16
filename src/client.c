@@ -1,11 +1,11 @@
 #include <raylib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
+#include "common.h"
 #include "raygui.h"
 #include "raymath.h"
-#include "common.h"
-
 
 Rectangle scale_rect(Rectangle rect, float scale) {
   float new_width = rect.width * scale;
@@ -177,6 +177,7 @@ void RenderMenu(GameState* g_state, const Vector2 window_size) {
 }
 
 int main(void) {
+  exit(0);
   InitWindow(800, 800, "MegaTicTacToe");
   Vector2 window_size = {GetMonitorHeight(GetCurrentMonitor()) * 0.8,
                          GetMonitorHeight(GetCurrentMonitor()) * 0.8};
@@ -208,7 +209,8 @@ int main(void) {
         // const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
         //                   : CalcBigGridState(&grid) == CELL_O ? "O wins!"
         //                                                       : "";
-        // DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, GOLD);
+        // DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60,
+        // GOLD);
         EndDrawing();
         break;
       case EXIT:
