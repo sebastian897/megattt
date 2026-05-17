@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/socket.h>
 
+#include "common.h"
 #include "winsock_compat.h"
 
 #ifdef WIN32
@@ -18,7 +19,6 @@ static struct sockaddr_in server_adr;
 // #else
 // static socklen_t slen = sizeof(server_adr);
 // #endif
-char buf[BUFLEN];
 
 void ClientInit(void) {
 #ifdef WIN32
@@ -64,17 +64,29 @@ void Send(const char* msg, int size) {
   }
 }
 
-void ClientReceive(void) {
+char* ClientReceive(void) {
+  char buf[BUFLEN];
+
   printf("Client: Waiting for msg \n");
-  while (true) {
-    ssize_t bytes_received = recv(sock, buf, BUFLEN - 1, 0);
-    if (bytes_received < 0) {
-      perror("recv failed");
-      exit(1);
-    } else if (bytes_received > 0) {
+
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(sock, &readfds);
+
+  struct timeval tv;
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;  // non-blocking poll
+
+  int rv = select(sock + 1, &readfds, NULL, NULL, &tv);
+
+  if (rv > 0 && FD_ISSET(sock, &readfds)) {
+    char buf[BUFLEN];
+    int bytes_received = recv(sock, buf, sizeof(buf), 0);
+
+    if (bytes_received > 0) {
       buf[bytes_received] = '\0';
       printf("Received: %s\n", buf);
-      break;
+      return buf;
     }
   }
 }

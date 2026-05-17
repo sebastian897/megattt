@@ -2,8 +2,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "client_net.h"
 #include "common.h"
@@ -85,8 +87,17 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
         grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
         *player = (*player + 1) % 2;
         if (grid->grids[b_row * 3 + b_col].state == CELL_EMPTY) {
+          PlayerMove move = {b_row * 3 + b_col, s_row * 3 + s_col};
+          char send_buf[BUFLEN] = {0};
+          memcpy(send_buf, &move, sizeof(move));
+          Send(send_buf, sizeof(send_buf));
+          char* rec_buf = ClientReceive();
+          game_packet packet = {0};
+          memcpy(&packet, rec_buf, sizeof(packet));
+          *grid = packet.grid;
+          *player = packet.turn;
+
           // send packet to server
-          // CalcSmallGridState(&grid->grids[b_row * 3 + b_col]);
         }
         if (grid->grids[s_row * 3 + s_col].state == CELL_EMPTY) {
           *turn_area = s_row * 3 + s_col;
@@ -166,7 +177,7 @@ void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
   }
 }
 
-void RenderMenu(GameState* g_state, const Vector2 window_size) {
+void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
   float padding = window_size.x * 23 / 270;
   Vector2 button_size = {window_size.x - padding * 2, window_size.y * 5 / 36};
 
@@ -181,10 +192,7 @@ void RenderMenu(GameState* g_state, const Vector2 window_size) {
 
 int main(void) {
   ClientInit();
-  const char msg[] = "hello";
-  Send(msg, sizeof(msg));
 
-  ClientReceive();
   exit(0);
   InitWindow(800, 800, "MegaTicTacToe");
   Vector2 window_size = {GetMonitorHeight(GetCurrentMonitor()) * 0.8,
@@ -194,7 +202,7 @@ int main(void) {
   BigGrid grid = {0};
   uint8_t player = 0;
   int turn_area = -1;
-  GameState game_state = MENU;
+  PlayerState game_state = MENU;
   SetTargetFPS(60);
   while (!WindowShouldClose() && game_state != EXIT) {
     switch (game_state) {
@@ -203,6 +211,12 @@ int main(void) {
         ClearBackground(BLACK);
         RenderMenu(&game_state, window_size);
         EndDrawing();
+        break;
+      case CONNECTING:
+        const char msg[] = "Seb";
+        Send(msg, sizeof(msg));
+
+        game_state = PLAYING;
         break;
       case PLAYING:
         OnMouseClick(&grid, game_area_rect, &player, &turn_area);
