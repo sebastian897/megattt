@@ -1,12 +1,12 @@
 #pragma once
 #include <stdint.h>
 
-#define SERVER "192.168.40.158"
+#define SERVER "127.0.0.1"
 #define PORT 5150
 #define BUFLEN 1024
 #define PLAYERS_MAX 2
 
-typedef enum PlayerState { MENU, CONNECTING, PLAYING, GAME_OVER, EXIT } PlayerState;
+typedef enum PlayerState { MENU, CONNECTING, WAITING, PLAYING, GAME_OVER, EXIT } PlayerState;
 
 typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O, CELL_DRAW } CellState;
 typedef struct Cell {
@@ -27,7 +27,13 @@ typedef struct PlayerMove {
   int small_grid_idx;
 } PlayerMove;
 
+typedef enum packet_type {
+  PT_CONNECT,
+  PT_GAME_DATA,
+} packet_type;
+
 typedef struct game_packet {
+  packet_type type;
   BigGrid grid;
   uint8_t turn;
 } game_packet;

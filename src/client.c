@@ -94,10 +94,11 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
           char* rec_buf = ClientReceive();
           game_packet packet = {0};
           memcpy(&packet, rec_buf, sizeof(packet));
-          *grid = packet.grid;
-          *player = packet.turn;
-
-          // send packet to server
+          free(rec_buf);
+          if (packet.type == PT_GAME_DATA){
+            *grid = packet.grid;
+            *player = packet.turn;
+          }
         }
         if (grid->grids[s_row * 3 + s_col].state == CELL_EMPTY) {
           *turn_area = s_row * 3 + s_col;
@@ -183,7 +184,7 @@ void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
 
   if (GuiButton((Rectangle){padding, window_size.y * 109 / 360, button_size.x, button_size.y},
                 "Play"))
-    *g_state = PLAYING;
+    *g_state = CONNECTING;
   if (GuiButton((Rectangle){padding, window_size.y * 109 / 360 + padding + button_size.y,
                             button_size.x, button_size.y},
                 "Exit"))
@@ -193,7 +194,7 @@ void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
 int main(void) {
   ClientInit();
 
-  exit(0);
+  // exit(0);
   InitWindow(800, 800, "MegaTicTacToe");
   Vector2 window_size = {GetMonitorHeight(GetCurrentMonitor()) * 0.8,
                          GetMonitorHeight(GetCurrentMonitor()) * 0.8};
@@ -216,7 +217,15 @@ int main(void) {
         const char msg[] = "Seb";
         Send(msg, sizeof(msg));
 
-        game_state = PLAYING;
+        game_state = WAITING;
+        break;
+      case WAITING:        
+        char *rec_buf = ClientReceive();
+        game_packet packet = {0};
+        memcpy(&packet, rec_buf, sizeof(packet));
+        free(rec_buf);
+        if (packet.type == PT_CONNECT)        
+          game_state = PLAYING;
         break;
       case PLAYING:
         OnMouseClick(&grid, game_area_rect, &player, &turn_area);

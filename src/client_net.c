@@ -64,8 +64,8 @@ void Send(const char* msg, int size) {
   }
 }
 
-char* ClientReceive(void) {
-  char buf[BUFLEN];
+char * ClientReceive(void) {
+  char *buf = malloc(BUFLEN);
 
   printf("Client: Waiting for msg \n");
 
@@ -80,15 +80,16 @@ char* ClientReceive(void) {
   int rv = select(sock + 1, &readfds, NULL, NULL, &tv);
 
   if (rv > 0 && FD_ISSET(sock, &readfds)) {
-    char buf[BUFLEN];
-    int bytes_received = recv(sock, buf, sizeof(buf), 0);
+    printf("Recieved packet");
+    exit(1);
+    int bytes_received = recv(sock, buf, sizeof(*buf), 0);
 
     if (bytes_received > 0) {
       buf[bytes_received] = '\0';
       printf("Received: %s\n", buf);
-      return buf;
     }
   }
+  return buf;
 }
 
 void ClientShutdown(void) {

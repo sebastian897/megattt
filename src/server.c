@@ -311,7 +311,65 @@ void CalcPlayerMove(Game* game, PlayerMove move) {
 }
 
 game_packet MakePacket(Game* game) {
-  return (game_packet){game->grid, game->turn};
+  return (game_packet){PT_GAME_DATA, game->grid, game->turn};
+}
+
+void ClearPriorityArr(int* arr[MAX_CLIENTS/PLAYERS_MAX]) {
+  for (int i = 0; i < MAX_CLIENTS/PLAYERS_MAX; i++) {
+    *arr[i] = -1;
+  }
+}
+
+int FindNextAvailableIdx(int arr[MAX_CLIENTS/PLAYERS_MAX]) {
+  for (int i = 0; i < MAX_CLIENTS/PLAYERS_MAX; i++) {
+    if (arr[i] < 0) {
+      return i;
+    }
+    return -1;
+  }
+}
+
+void AddToNewGame(Game* games[MAX_CLIENTS/PLAYERS_MAX], client cl) {
+  int first_empty_game = -1;
+  for (int g =0; g<MAX_CLIENTS/PLAYERS_MAX; g++) {
+    bool full = true;
+    bool not_empty = false;
+    int first_empty_client_slot = -1;
+    for (int cl_idx = 0; cl_idx < PLAYERS_MAX; cl_idx++) {
+      if (games[g]->clients[cl_idx].name == "") {
+        full = false;
+        if (first_empty_client_slot < 0) {
+          first_empty_client_slot = cl_idx;
+        }
+      } else {
+        not_empty = true;
+      }
+    }
+    if (!full) {
+      if (!not_empty) {
+        games[g]->clients[first_empty_client_slot] = cl;
+        return;
+      }
+      if (first_empty_game <0 ){
+        first_empty_game = g;
+      }
+    }
+  }
+  if (first_empty_game < 0) {
+    perror("All games are full");
+  } else {
+    games[first_empty_game]->clients[0] = cl;
+  }
+  return;
+}
+
+bool IsGameFull(Game* game) {
+  for (int cl = 0; cl < PLAYERS_MAX; cl++) {
+    if (game->clients[cl].name == "") {
+      return false;
+    }
+  }
+  return true;
 }
 
 int main() {
@@ -339,9 +397,9 @@ int main() {
     }
 
     // Wait for activity
-    printf("Server: Selecting\n");
+    // printf("Server: Selecting\n");
     activity = select(max_sock + 1, &readfds, NULL, NULL, NULL);
-    printf("Server: Selection ended\n");
+    // printf("Server: Selection ended\n");
 
     if (activity < 0 && errno != EINTR) {
       perror("select");
@@ -376,6 +434,19 @@ int main() {
         Game* game = &games[g];
         client* cl = &game->clients[c];
 
+        if (cl->state == CS_POOL) {
+          if (IsGameFull(game)) {
+            printf("Server: Sending connecting packet");
+            char send_buf[BUFLEN] = {0};
+            game_packet packet = {0};
+            packet.type = PT_CONNECT;
+            memcpy(&send_buf, &packet, sizeof(packet));
+            for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
+              send(game->clients[c_idx].sock, send_buf, sizeof(packet), 0);
+            }
+          }
+        }
+
         if (FD_ISSET(cl->sock, &readfds)) {
           int bytes_read = read(cl->sock, buf, BUFLEN - 1);
 
@@ -392,22 +463,26 @@ int main() {
             buf[bytes_read] = '\0';
             switch (cl->state) {
               case CS_EMPTY:
+                printf("Server: Added player to new game");
                 strncpy(buf, cl->name, sizeof(cl->name));
                 cl->state = CS_POOL;
+                AddToNewGame(&game, *cl);
                 break;
               case CS_POOL:
                 // player sending when in pool?
                 break;
               case CS_PLAYING:
+                printf("Server: Recieved player move");
                 PlayerMove move;
                 memcpy(&move, buf, sizeof(move));
                 CalcPlayerMove(game, move);
                 // player move;
+                printf("Server: Sending game packet to game clients");
                 char send_buf[BUFLEN] = {0};
                 game_packet packet = MakePacket(game);
                 memcpy(&send_buf, &packet, sizeof(packet));
                 for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
-                  send(game->clients[c_idx].sock, send_buf, bytes_read, 0);
+                  send(game->clients[c_idx].sock, send_buf, sizeof(packet), 0);
                 }
                 break;
             }
