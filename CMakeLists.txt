@@ -41,11 +41,13 @@ add_executable(megattt
   src/client_net.c
   src/raygui_impl.c
 )
+target_link_libraries(megattt PRIVATE raylib raygui)
+setup_target_warnings_and_sanitizers(megattt)
+
 add_executable(megattt-server
   src/server.c
   src/buffer_control.c
 )
+setup_target_warnings_and_sanitizers(megattt-server)
 
-target_link_libraries(megattt PRIVATE raylib raygui)
-setup_target_warnings_and_sanitizers(megattt)
 

@@ -95,7 +95,7 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
           game_packet packet = {0};
           memcpy(&packet, rec_buf, sizeof(packet));
           free(rec_buf);
-          if (packet.type == PT_GAME_DATA){
+          if (packet.type == PT_GAME_DATA) {
             *grid = packet.grid;
             *player = packet.turn;
           }
@@ -219,13 +219,12 @@ int main(void) {
 
         game_state = WAITING;
         break;
-      case WAITING:        
-        char *rec_buf = ClientReceive();
+      case WAITING:
+        char* rec_buf = ClientReceive();
         game_packet packet = {0};
         memcpy(&packet, rec_buf, sizeof(packet));
         free(rec_buf);
-        if (packet.type == PT_CONNECT)        
-          game_state = PLAYING;
+        if (packet.type == PT_CONNECT) game_state = PLAYING;
         break;
       case PLAYING:
         OnMouseClick(&grid, game_area_rect, &player, &turn_area);
