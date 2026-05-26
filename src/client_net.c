@@ -64,10 +64,10 @@ void Send(const char* msg, int size) {
   }
 }
 
-char * ClientReceive(void) {
-  char *buf = malloc(BUFLEN);
+bool ClientReceive(char* buf) {
+  // char* buf = malloc(BUFLEN);
 
-  printf("Client: Waiting for msg \n");
+  // printf("Client: Waiting for msg \n");
 
   fd_set readfds;
   FD_ZERO(&readfds);
@@ -77,19 +77,31 @@ char * ClientReceive(void) {
   tv.tv_sec = 0;
   tv.tv_usec = 0;  // non-blocking poll
 
-  int rv = select(sock + 1, &readfds, NULL, NULL, &tv);
+  int select_rv = select(sock + 1, &readfds, NULL, NULL, &tv);
 
-  if (rv > 0 && FD_ISSET(sock, &readfds)) {
-    printf("Recieved packet");
-    exit(1);
-    int bytes_received = recv(sock, buf, sizeof(*buf), 0);
+  if (select_rv < 0) {
+    perror("select");
+    return false;
+  }
+
+  if (select_rv > 0 && FD_ISSET(sock, &readfds)) {
+    int bytes_received = recv(sock, buf, BUFLEN, 0);
+
+    if (bytes_received < 0) {
+      perror("recv");
+      return false;
+    }
 
     if (bytes_received > 0) {
-      buf[bytes_received] = '\0';
-      printf("Received: %s\n", buf);
+      printf("Recieved packet:");
+      for (int b = 0; b < bytes_received; b++) {
+        printf(" %02x", buf[b]);
+      }
+      printf("\n");
+      return true;
     }
   }
-  return buf;
+  return false;
 }
 
 void ClientShutdown(void) {

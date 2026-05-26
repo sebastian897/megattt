@@ -1,6 +1,8 @@
+#include <inttypes.h>
 #include <raylib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -69,7 +71,7 @@ void DrawGameArea(BigGrid* grid, Rectangle game_area_rect, int turn_area) {
   }
 }
 
-void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected_pos,
+bool DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected_pos,
                        float big_grid_line_thickness, float small_grid_size,
                        float small_grid_line_thickness, float cell_size, int b_col, int b_row,
                        uint8_t* player, int* turn_area) {
@@ -84,34 +86,24 @@ void DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
                              small_grid_rect.y + s_row * (cell_size + small_grid_line_thickness),
                              cell_size, cell_size};
       if (CheckCollisionPointRec(selected_pos, cell_rect)) {
-        grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
-        *player = (*player + 1) % 2;
+        // grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
+        // *player = (*player + 1) % 2;
         if (grid->grids[b_row * 3 + b_col].state == CELL_EMPTY) {
           PlayerMove move = {b_row * 3 + b_col, s_row * 3 + s_col};
           char send_buf[BUFLEN] = {0};
           memcpy(send_buf, &move, sizeof(move));
-          Send(send_buf, sizeof(send_buf));
-          char* rec_buf = ClientReceive();
-          game_packet packet = {0};
-          memcpy(&packet, rec_buf, sizeof(packet));
-          free(rec_buf);
-          if (packet.type == PT_GAME_DATA) {
-            *grid = packet.grid;
-            *player = packet.turn;
-          }
-        }
-        if (grid->grids[s_row * 3 + s_col].state == CELL_EMPTY) {
-          *turn_area = s_row * 3 + s_col;
-        } else {
-          *turn_area = -1;
+          Send(send_buf, sizeof(move));
+          return true;
         }
       }
     }
   }
+  return false;
 }
 
 void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, uint8_t* player, int* turn_area) {
   if (!IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) return;
+  printf("CLicked\n");
   Vector2 selected_pos =
       Vector2Subtract(GetMousePosition(), (Vector2){game_area_rect.x, game_area_rect.y});
   float big_grid_line_thickness = game_area_rect.height / 50;
@@ -124,16 +116,19 @@ void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, uint8_t* player, int*
         if (grid->grids[b_row * 3 + b_col].state != CELL_EMPTY) {
           continue;
         }
-        DetectClickInArea(grid, game_area_rect, selected_pos, big_grid_line_thickness,
-                          small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row,
-                          player, turn_area);
+        if (DetectClickInArea(grid, game_area_rect, selected_pos, big_grid_line_thickness,
+                              small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row,
+                              player, turn_area))
+          return;
       }
     }
   } else {
     int b_col = *turn_area % 3;
     int b_row = *turn_area / 3;
-    DetectClickInArea(grid, game_area_rect, selected_pos, big_grid_line_thickness, small_grid_size,
-                      small_grid_line_thickness, cell_size, b_col, b_row, player, turn_area);
+    if (DetectClickInArea(grid, game_area_rect, selected_pos, big_grid_line_thickness,
+                          small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row,
+                          player, turn_area))
+      return;
   }
 }
 
@@ -183,12 +178,21 @@ void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
   Vector2 button_size = {window_size.x - padding * 2, window_size.y * 5 / 36};
 
   if (GuiButton((Rectangle){padding, window_size.y * 109 / 360, button_size.x, button_size.y},
-                "Play"))
+                "Play")) {
+    const char msg[] = "Seb";
+    Send(msg, sizeof(msg));
+
     *g_state = CONNECTING;
+  }
   if (GuiButton((Rectangle){padding, window_size.y * 109 / 360 + padding + button_size.y,
                             button_size.x, button_size.y},
                 "Exit"))
     *g_state = EXIT;
+}
+
+void RenderConnecting(Vector2 window_size) {
+  const char* msg = "Finding Game...";
+  DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, WHITE);
 }
 
 int main(void) {
@@ -201,10 +205,12 @@ int main(void) {
   SetWindowSize(window_size.x, window_size.y);
   Rectangle game_area_rect = (Rectangle){0, 0, window_size.x, window_size.y};
   BigGrid grid = {0};
-  uint8_t player = 0;
+  uint8_t player;
+  uint8_t turn = 0;
   int turn_area = -1;
   PlayerState game_state = MENU;
   SetTargetFPS(60);
+  char rec_buf[BUFLEN] = {0};
   while (!WindowShouldClose() && game_state != EXIT) {
     switch (game_state) {
       case MENU:
@@ -214,25 +220,35 @@ int main(void) {
         EndDrawing();
         break;
       case CONNECTING:
-        const char msg[] = "Seb";
-        Send(msg, sizeof(msg));
-
-        game_state = WAITING;
-        break;
-      case WAITING:
-        char* rec_buf = ClientReceive();
-        game_packet packet = {0};
-        memcpy(&packet, rec_buf, sizeof(packet));
-        free(rec_buf);
-        if (packet.type == PT_CONNECT) game_state = PLAYING;
+        BeginDrawing();
+        ClearBackground(BLACK);
+        RenderConnecting(window_size);
+        EndDrawing();
+        if (ClientReceive(rec_buf)) {
+          game_packet packet = {0};
+          memcpy(&packet, rec_buf, sizeof(packet));
+          if (packet.type == PT_CONNECT) {
+            game_state = PLAYING;
+            player = packet.turn;
+          }
+        }
         break;
       case PLAYING:
-        OnMouseClick(&grid, game_area_rect, &player, &turn_area);
+        if (player == turn) OnMouseClick(&grid, game_area_rect, &player, &turn_area);
         BeginDrawing();
         ClearBackground(WHITE);
         DrawTurns(&grid, game_area_rect);
         DrawGameArea(&grid, game_area_rect, turn_area);
         EndDrawing();
+        if (ClientReceive(rec_buf)) {
+          game_packet packet = {0};
+          memcpy(&packet, &rec_buf, sizeof(packet));
+          if (packet.type == PT_GAME_DATA) {
+            grid = packet.grid;
+            turn_area = packet.turn_area;
+            turn = packet.turn;
+          }
+        }
         break;
       case GAME_OVER:
         BeginDrawing();

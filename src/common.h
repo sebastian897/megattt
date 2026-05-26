@@ -6,7 +6,7 @@
 #define BUFLEN 1024
 #define PLAYERS_MAX 2
 
-typedef enum PlayerState { MENU, CONNECTING, WAITING, PLAYING, GAME_OVER, EXIT } PlayerState;
+typedef enum PlayerState { MENU, CONNECTING, PLAYING, GAME_OVER, EXIT } PlayerState;
 
 typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O, CELL_DRAW } CellState;
 typedef struct Cell {
@@ -28,12 +28,13 @@ typedef struct PlayerMove {
 } PlayerMove;
 
 typedef enum packet_type {
-  PT_CONNECT,
+  PT_CONNECT = 22,
   PT_GAME_DATA,
 } packet_type;
 
 typedef struct game_packet {
   packet_type type;
   BigGrid grid;
+  int turn_area;
   uint8_t turn;
 } game_packet;

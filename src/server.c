@@ -12,6 +12,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "buffer_control.h"
@@ -40,6 +41,8 @@ static SOCKET server_sock;
 char buf[BUFLEN];
 
 void ServerInit(void) {
+  srand(time(NULL));
+
   struct sockaddr_in server;
 #ifdef WIN32
   WSADATA wsa;
@@ -205,6 +208,7 @@ typedef struct client {
 typedef struct Game {
   BigGrid grid;
   char code[5];
+  int turn_area;
   uint8_t turn;
   client* clients[PLAYERS_MAX];
 } Game;
@@ -212,10 +216,15 @@ typedef struct Game {
 void CalcPlayerMove(Game* game, PlayerMove move) {
   game->grid.grids[move.big_grid_idx].cells[move.small_grid_idx].state = game->turn + 1;
   game->turn = (game->turn + 1) % 2;
+  if (game->grid.grids[move.small_grid_idx].state == CELL_EMPTY) {
+    game->turn_area = move.small_grid_idx;
+  } else {
+    game->turn_area = -1;
+  }
 }
 
 game_packet MakePacket(Game* game) {
-  return (game_packet){PT_GAME_DATA, game->grid, game->turn};
+  return (game_packet){PT_GAME_DATA, game->grid, game->turn_area, game->turn};
 }
 
 void AddToNewGame(Game games[MAX_CLIENTS / PLAYERS_MAX], client* cl) {
@@ -267,7 +276,7 @@ bool IsGameFull(Game* game) {
 
 void RemoveClFromItsGame(client* cl) {
   for (int pl = 0; pl < PLAYERS_MAX; pl++) {
-    if (cl->game->clients[pl] == cl) {
+    if (cl->game != NULL && cl->game->clients[pl] == cl) {
       cl->game->clients[pl] = NULL;
       return;
     };
@@ -338,12 +347,19 @@ int main() {
 
       if (cl->state == CS_POOL) {
         if (IsGameFull(game)) {
-          printf("Server: Sending connecting packet\n");
+          // printf("Server: Sending connecting packet\n");
           char send_buf[BUFLEN] = {0};
           game_packet packet = {0};
           packet.type = PT_CONNECT;
-          memcpy(&send_buf, &packet, sizeof(packet));
+
+          uint8_t rnd_player = rand() & 1;
+
           for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
+            packet.turn = c_idx ^ rnd_player;
+            memcpy(&send_buf, &packet, sizeof(packet));
+
+            printf("send connecting packet to FD: %d\n", game->clients[c_idx]->sock);
+
             send(game->clients[c_idx]->sock, send_buf, sizeof(packet), 0);
             game->clients[c_idx]->state = CS_PLAYING;
           }
@@ -355,10 +371,11 @@ int main() {
 
         // Client disconnected
         if (bytes_read <= 0) {
-          getpeername(cl->sock, (struct sockaddr*)&client_addr, &client_len);
+          // if (getpeername(cl->sock, (struct sockaddr*)&client_addr, &client_len) < 0) {
+          //   perror("Coundnt identify client");
+          // }
 
-          printf("Client disconnected: IP %s, port %d\n", inet_ntoa(client_addr.sin_addr),
-                 ntohs(client_addr.sin_port));
+          printf("Client disconnected: FD %d\n", cl->sock);
 
           close(cl->sock);
           RemoveClFromItsGame(cl);
@@ -375,17 +392,25 @@ int main() {
               // player sending when in pool?
               break;
             case CS_PLAYING:
-              printf("Server: Recieved player move");
               PlayerMove move;
               memcpy(&move, buf, sizeof(move));
+
+              printf("Server: Recieved player move from FD: %d B: %d, S: %d\n", cl->sock,
+                     move.big_grid_idx, move.small_grid_idx);
               CalcPlayerMove(game, move);
               // player move;
-              printf("Server: Sending game packet to game clients");
+              printf("Server: Sending game packet to game clients: ");
               char send_buf[BUFLEN] = {0};
               game_packet packet = MakePacket(game);
               memcpy(&send_buf, &packet, sizeof(packet));
+              for (int b = 0; b < sizeof(packet); b++) {
+                printf(" %02x", buf[b]);
+              }
+              printf("\n");
               for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
-                send(game->clients[c_idx]->sock, send_buf, sizeof(packet), 0);
+                if (send(game->clients[c_idx]->sock, send_buf, sizeof(packet), 0) < 0) {
+                  perror("Send failed");
+                };
               }
               break;
           }
