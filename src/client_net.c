@@ -93,11 +93,10 @@ bool ClientReceive(char* buf) {
     }
 
     if (bytes_received > 0) {
-      printf("Recieved packet:");
-      for (int b = 0; b < bytes_received; b++) {
-        printf(" %02x", buf[b]);
-      }
-      printf("\n");
+      printf("Recieved packet\n");
+      // for (int b = 0; b < bytes_received; b++) {
+      //   printf(" %02x", buf[b]);
+      // }
       return true;
     }
   }

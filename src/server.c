@@ -75,7 +75,7 @@ void ServerInit(void) {
 
   // Prepare server address
   server.sin_family = AF_INET;
-  const char* ip_str = SERVER;
+  const char* ip_str = SERVER_BIND;
   if (inet_pton(AF_INET, ip_str, &server.sin_addr.s_addr) != 1) {
     printf("Server: inet_pton failed: %d\n", WSAGetLastError());
 #ifdef WIN32
@@ -259,6 +259,7 @@ void AddToNewGame(Game games[MAX_CLIENTS / PLAYERS_MAX], client* cl) {
     perror("All games are full");
   } else {
     printf("Server: Added player to new game, idx = %d\n", first_empty_game);
+    memset(&games[first_empty_game], 0, sizeof(Game));
     games[first_empty_game].clients[0] = cl;
     cl->game = &games[first_empty_game];
   }
@@ -275,6 +276,7 @@ bool IsGameFull(Game* game) {
 }
 
 void RemoveClFromItsGame(client* cl) {
+  if (cl == NULL) return;
   for (int pl = 0; pl < PLAYERS_MAX; pl++) {
     if (cl->game != NULL && cl->game->clients[pl] == cl) {
       cl->game->clients[pl] = NULL;
@@ -347,6 +349,7 @@ int main() {
 
       if (cl->state == CS_POOL) {
         if (IsGameFull(game)) {
+          // memset(&game->grid, 0, sizeof(*game->grid));
           // printf("Server: Sending connecting packet\n");
           char send_buf[BUFLEN] = {0};
           game_packet packet = {0};
@@ -371,17 +374,19 @@ int main() {
 
         // Client disconnected
         if (bytes_read <= 0) {
-          // if (getpeername(cl->sock, (struct sockaddr*)&client_addr, &client_len) < 0) {
-          //   perror("Coundnt identify client");
-          // }
-
           printf("Client disconnected: FD %d\n", cl->sock);
 
           close(cl->sock);
-          RemoveClFromItsGame(cl);
+          if (cl->game != NULL) {
+            for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
+              RemoveClFromItsGame(cl->game->clients[c_idx]);
+            }
+          }
           memset(cl, 0, sizeof(*cl));
         } else {
-          buf[bytes_read] = '\0';
+          printf("Received from fd %d: ", cl->sock);
+          for (int b = 0; b < bytes_read; b++) printf(" %02x", buf[b]);
+          printf("\n");
           switch (cl->state) {
             case CS_EMPTY:
               strncpy(cl->name, buf, sizeof(cl->name));
@@ -394,7 +399,6 @@ int main() {
             case CS_PLAYING:
               PlayerMove move;
               memcpy(&move, buf, sizeof(move));
-
               printf("Server: Recieved player move from FD: %d B: %d, S: %d\n", cl->sock,
                      move.big_grid_idx, move.small_grid_idx);
               CalcPlayerMove(game, move);
@@ -403,10 +407,6 @@ int main() {
               char send_buf[BUFLEN] = {0};
               game_packet packet = MakePacket(game);
               memcpy(&send_buf, &packet, sizeof(packet));
-              for (int b = 0; b < sizeof(packet); b++) {
-                printf(" %02x", buf[b]);
-              }
-              printf("\n");
               for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
                 if (send(game->clients[c_idx]->sock, send_buf, sizeof(packet), 0) < 0) {
                   perror("Send failed");
@@ -414,7 +414,6 @@ int main() {
               }
               break;
           }
-          printf("Received from fd %d: %s\n", cl->sock, buf);
         }
       }
     }
