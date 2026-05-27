@@ -73,8 +73,7 @@ void DrawGameArea(BigGrid* grid, Rectangle game_area_rect, int turn_area) {
 
 bool DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected_pos,
                        float big_grid_line_thickness, float small_grid_size,
-                       float small_grid_line_thickness, float cell_size, int b_col, int b_row,
-                       uint8_t* player, int* turn_area) {
+                       float small_grid_line_thickness, float cell_size, int b_col, int b_row) {
   Rectangle small_grid_rect =
       scale_rect((Rectangle){game_area_rect.x + b_col * (small_grid_size + big_grid_line_thickness),
                              game_area_rect.y + b_row * (small_grid_size + big_grid_line_thickness),
@@ -86,8 +85,6 @@ bool DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
                              small_grid_rect.y + s_row * (cell_size + small_grid_line_thickness),
                              cell_size, cell_size};
       if (CheckCollisionPointRec(selected_pos, cell_rect)) {
-        // grid->grids[b_row * 3 + b_col].cells[s_row * 3 + s_col].state = *player + 1;
-        // *player = (*player + 1) % 2;
         if (grid->grids[b_row * 3 + b_col].state == CELL_EMPTY) {
           PlayerMove move = {b_row * 3 + b_col, s_row * 3 + s_col};
           char send_buf[BUFLEN] = {0};
@@ -101,7 +98,7 @@ bool DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
   return false;
 }
 
-void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, uint8_t* player, int* turn_area) {
+void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, int* turn_area) {
   if (!IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) return;
   printf("CLicked\n");
   Vector2 selected_pos =
@@ -117,8 +114,7 @@ void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, uint8_t* player, int*
           continue;
         }
         if (DetectClickInArea(grid, game_area_rect, selected_pos, big_grid_line_thickness,
-                              small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row,
-                              player, turn_area))
+                              small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row))
           return;
       }
     }
@@ -126,8 +122,7 @@ void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, uint8_t* player, int*
     int b_col = *turn_area % 3;
     int b_row = *turn_area / 3;
     if (DetectClickInArea(grid, game_area_rect, selected_pos, big_grid_line_thickness,
-                          small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row,
-                          player, turn_area))
+                          small_grid_size, small_grid_line_thickness, cell_size, b_col, b_row))
       return;
   }
 }
@@ -205,8 +200,7 @@ int main(void) {
   SetWindowSize(window_size.x, window_size.y);
   Rectangle game_area_rect = (Rectangle){0, 0, window_size.x, window_size.y};
   BigGrid grid = {0};
-  uint8_t player;
-  uint8_t turn = 0;
+  bool turn;
   int turn_area = -1;
   PlayerState game_state = MENU;
   SetTargetFPS(60);
@@ -229,12 +223,13 @@ int main(void) {
           memcpy(&packet, rec_buf, sizeof(packet));
           if (packet.type == PT_CONNECT) {
             game_state = PLAYING;
-            player = packet.turn;
+            turn = packet.turn;
+            printf("Connecting: Turn = %d\n", turn);
           }
         }
         break;
       case PLAYING:
-        if (player == turn) OnMouseClick(&grid, game_area_rect, &player, &turn_area);
+        if (turn) OnMouseClick(&grid, game_area_rect, &turn_area);
         BeginDrawing();
         ClearBackground(WHITE);
         DrawTurns(&grid, game_area_rect);
@@ -247,6 +242,7 @@ int main(void) {
             grid = packet.grid;
             turn_area = packet.turn_area;
             turn = packet.turn;
+            printf("Turn = %d\n", turn);
           }
         }
         break;

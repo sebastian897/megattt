@@ -224,7 +224,7 @@ void CalcPlayerMove(Game* game, PlayerMove move) {
 }
 
 game_packet MakePacket(Game* game) {
-  return (game_packet){PT_GAME_DATA, game->grid, game->turn_area, game->turn};
+  return (game_packet){PT_GAME_DATA, sizeof(game_packet), game->grid, game->turn_area, 0};
 }
 
 void AddToNewGame(Game games[MAX_CLIENTS / PLAYERS_MAX], client* cl) {
@@ -283,6 +283,13 @@ void RemoveClFromItsGame(client* cl) {
       return;
     };
   }
+}
+
+void ShuffleClients(Game* game) {
+  uint8_t rnd_player = rand() & 1;
+  client* temp = game->clients[1 ^ rnd_player];
+  game->clients[1 ^ rnd_player] = game->clients[rnd_player];
+  game->clients[rnd_player] = temp;
 }
 
 int main() {
@@ -355,10 +362,9 @@ int main() {
           game_packet packet = {0};
           packet.type = PT_CONNECT;
 
-          uint8_t rnd_player = rand() & 1;
-
           for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
-            packet.turn = c_idx ^ rnd_player;
+            packet.turn = game->turn^c_idx;
+            printf("For c_idx: %d turn = %d\n", c_idx, packet.turn);
             memcpy(&send_buf, &packet, sizeof(packet));
 
             printf("send connecting packet to FD: %d\n", game->clients[c_idx]->sock);
@@ -406,8 +412,9 @@ int main() {
               printf("Server: Sending game packet to game clients: ");
               char send_buf[BUFLEN] = {0};
               game_packet packet = MakePacket(game);
-              memcpy(&send_buf, &packet, sizeof(packet));
               for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
+                packet.turn = game->turn^c_idx;
+                memcpy(&send_buf, &packet, sizeof(packet));
                 if (send(game->clients[c_idx]->sock, send_buf, sizeof(packet), 0) < 0) {
                   perror("Send failed");
                 };
