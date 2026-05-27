@@ -129,7 +129,7 @@ void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, int* turn_area) {
 
 void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
   float big_grid_line_thickness = game_area_rect.height / 50;
-  float small_grid_size = (game_area_rect.width - big_grid_line_thickness * 2) / 3;
+  float small_grid_size = (game_area_rect.height - big_grid_line_thickness * 2) / 3;
   float small_grid_line_thickness = small_grid_size / 50 * 0.9;
   float cell_size = (small_grid_size - small_grid_line_thickness * 2) / 3 * 0.9;
   float shape_thickness = cell_size / 10;
@@ -166,6 +166,13 @@ void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
       }
     }
   }
+}
+
+void DrawIndicator(bool turn, Vector2 window_size) {
+  if (!turn) return;
+  float padding = window_size.y*0.005;
+  float radius = window_size.y*0.01;
+  DrawCircle(window_size.x-radius-padding, 0+radius+padding, radius, ColorAlpha(RED, 0.6));
 }
 
 void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
@@ -234,6 +241,7 @@ int main(void) {
         ClearBackground(WHITE);
         DrawTurns(&grid, game_area_rect);
         DrawGameArea(&grid, game_area_rect, turn_area);
+        DrawIndicator(turn, window_size);
         EndDrawing();
         if (ClientReceive(rec_buf)) {
           game_packet packet = {0};

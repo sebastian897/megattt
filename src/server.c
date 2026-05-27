@@ -356,8 +356,8 @@ int main() {
 
       if (cl->state == CS_POOL) {
         if (IsGameFull(game)) {
-          // memset(&game->grid, 0, sizeof(*game->grid));
-          // printf("Server: Sending connecting packet\n");
+          ShuffleClients(game);
+
           char send_buf[BUFLEN] = {0};
           game_packet packet = {0};
           packet.type = PT_CONNECT;
