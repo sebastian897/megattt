@@ -211,10 +211,21 @@ typedef struct Game {
   int turn_area;
   uint8_t turn;
   client* clients[PLAYERS_MAX];
+  uint8_t winner;
 } Game;
 
 void CalcPlayerMove(Game* game, PlayerMove move) {
   game->grid.grids[move.big_grid_idx].cells[move.small_grid_idx].state = game->turn + 1;
+
+  CalcSmallGridState(&game->grid.grids[move.big_grid_idx]);
+  game->winner = CalcBigGridState(&game->grid);
+  printf("Grid 2 state = %d\n", game->grid.grids[2].state);
+  if (game->winner > 0) {
+    for (int c_idx =0; c_idx < PLAYERS_MAX; c_idx++) {
+      game->clients[c_idx]->state = CS_EMPTY;
+    }
+  }
+
   game->turn = (game->turn + 1) % 2;
   if (game->grid.grids[move.small_grid_idx].state == CELL_EMPTY) {
     game->turn_area = move.small_grid_idx;
@@ -360,7 +371,8 @@ int main() {
 
           char send_buf[BUFLEN] = {0};
           game_packet packet = {0};
-          packet.type = PT_CONNECT;
+          packet.type = PT_GAME_DATA;
+          packet.turn_area = -1; // can place anywhere at the start
 
           for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
             packet.turn = game->turn^c_idx;

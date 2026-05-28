@@ -1,8 +1,8 @@
 #pragma once
 #include <stdint.h>
 
-#define SERVER "127.0.0.1"
-#define SERVER_BIND "127.0.0.1"
+#define SERVER "192.168.1.112"
+#define SERVER_BIND "192.168.1.112"
 #define PORT 5150
 #define BUFLEN 1024
 #define PLAYERS_MAX 2
@@ -29,7 +29,6 @@ typedef struct PlayerMove {
 } PlayerMove;
 
 typedef enum packet_type {
-  PT_CONNECT = 22,
   PT_GAME_DATA,
 } packet_type;
 

@@ -197,6 +197,21 @@ void RenderConnecting(Vector2 window_size) {
   DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, WHITE);
 }
 
+void HandlePacketData(PlayerState *game_state, BigGrid* grid, int* turn_area, bool *turn) {
+  char rec_buf[BUFLEN];
+  if (ClientReceive(rec_buf)) {
+    game_packet packet = {0};
+    memcpy(&packet, rec_buf, sizeof(packet));
+    if (packet.type == PT_GAME_DATA) {
+      *game_state = PLAYING;
+      *grid = packet.grid;
+      *turn_area = packet.turn_area;
+      *turn = packet.turn;
+      printf("Connecting: Turn = %d\n", *turn);
+    }
+  }
+}
+
 int main(void) {
   ClientInit();
 
@@ -211,7 +226,6 @@ int main(void) {
   int turn_area = -1;
   PlayerState game_state = MENU;
   SetTargetFPS(60);
-  char rec_buf[BUFLEN] = {0};
   while (!WindowShouldClose() && game_state != EXIT) {
     switch (game_state) {
       case MENU:
@@ -225,15 +239,7 @@ int main(void) {
         ClearBackground(BLACK);
         RenderConnecting(window_size);
         EndDrawing();
-        if (ClientReceive(rec_buf)) {
-          game_packet packet = {0};
-          memcpy(&packet, rec_buf, sizeof(packet));
-          if (packet.type == PT_CONNECT) {
-            game_state = PLAYING;
-            turn = packet.turn;
-            printf("Connecting: Turn = %d\n", turn);
-          }
-        }
+        HandlePacketData(&game_state, &grid, &turn_area, &turn);
         break;
       case PLAYING:
         if (turn) OnMouseClick(&grid, game_area_rect, &turn_area);
@@ -243,16 +249,7 @@ int main(void) {
         DrawGameArea(&grid, game_area_rect, turn_area);
         DrawIndicator(turn, window_size);
         EndDrawing();
-        if (ClientReceive(rec_buf)) {
-          game_packet packet = {0};
-          memcpy(&packet, &rec_buf, sizeof(packet));
-          if (packet.type == PT_GAME_DATA) {
-            grid = packet.grid;
-            turn_area = packet.turn_area;
-            turn = packet.turn;
-            printf("Turn = %d\n", turn);
-          }
-        }
+        HandlePacketData(&game_state, &grid, &turn_area, &turn);
         break;
       case GAME_OVER:
         BeginDrawing();
