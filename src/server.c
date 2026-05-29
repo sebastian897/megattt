@@ -193,6 +193,7 @@ void CalcPlayerMove(Game* game, PlayerMove move) {
     printf("Winner = %d\n", game->grid.state);
     for (int c_idx =0; c_idx < PLAYERS_MAX; c_idx++) {
       game->clients[c_idx]->state = CS_EMPTY;
+      game->clients[c_idx]->game = NULL;
     }
   }
 

@@ -248,7 +248,7 @@ int main(void) {
   BigGrid grid = {0};
   bool turn;
   int turn_area = -1;
-  PlayerState game_state = GAME_OVER;
+  PlayerState game_state = MENU;
   SetTargetFPS(60);
   bool menu_active = false;
   while (!WindowShouldClose() && game_state != EXIT) {
