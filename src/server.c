@@ -25,11 +25,6 @@ static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};
 
 #define MAX_CLIENTS 128
 
-// typedef struct client {
-//   struct sockaddr_in addr;
-//   bool active;
-// } client;
-
 // static client clients[PLAYERS_MAX] = {0};
 static SOCKET server_sock;
 // #ifdef WIN32
@@ -112,37 +107,7 @@ void ServerShutdown(void) {
 #endif
 }
 
-void Accept(void) {
-  // Accept one client connection
-  struct sockaddr_in address;
-  socklen_t addrlen = sizeof(address);
-  int client_fd = accept(server_sock, (struct sockaddr*)&address, &addrlen);
-  if (client_fd < 0) {
-    perror("accept failed");
-    close(server_sock);
-    exit(EXIT_FAILURE);
-  }
-
-  char addr_buf[50];
-  inet_ntop(AF_INET, &address.sin_addr.s_addr, addr_buf, 50);
-  printf("Client connected from %s\n", addr_buf);
-  // Receive data
-  ssize_t bytes_received = recv(client_fd, buf, BUFLEN - 1, 0);
-  if (bytes_received < 0) {
-    perror("recv failed");
-  } else {
-    buf[bytes_received] = '\0';
-    printf("Received: %s\n", buf);
-  }
-  ssize_t err = send(client_fd, "oi oi", 6, 0);
-  printf("Server: Error from bytes sent: %ld", err);
-  if (err == SOCKET_ERROR) {
-    perror("server: send failed");
-    exit(1);
-  }
-}
-
-uint8_t CalcBigGridState(BigGrid* grid) {
+void CalcBigGridState(BigGrid* grid) {
   uint16_t player_pattern[2] = {0, 0};
   uint8_t player_count[2] = {0};
   for (int c = 0; c < 9; c++) {
@@ -156,15 +121,14 @@ uint8_t CalcBigGridState(BigGrid* grid) {
   }
   for (int player = 0; player < 2; player++) {
     for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
-        return player + 1;
+      if (player_pattern[player] == cell_patterns[pat]) {
+        grid->state = player + 1;
       }
     }
   }
   if (player_count[0] + player_count[1] == 9) {
-    return CELL_DRAW;
+    grid->state = CELL_DRAW;
   }
-  return CELL_EMPTY;
 }
 
 void CalcSmallGridState(SmallGrid* grid) {
@@ -181,7 +145,7 @@ void CalcSmallGridState(SmallGrid* grid) {
   }
   for (int player = 0; player < 2; player++) {
     for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
+      if (grid->state == CELL_EMPTY && player_pattern[player] == cell_patterns[pat]) {
         grid->state = player + 1;
       }
     }
@@ -190,6 +154,7 @@ void CalcSmallGridState(SmallGrid* grid) {
     grid->state = CELL_DRAW;
   }
 }
+
 typedef enum client_state {
   CS_EMPTY,
   CS_POOL,
@@ -211,16 +176,21 @@ typedef struct Game {
   int turn_area;
   uint8_t turn;
   client* clients[PLAYERS_MAX];
-  uint8_t winner;
 } Game;
 
 void CalcPlayerMove(Game* game, PlayerMove move) {
   game->grid.grids[move.big_grid_idx].cells[move.small_grid_idx].state = game->turn + 1;
 
   CalcSmallGridState(&game->grid.grids[move.big_grid_idx]);
-  game->winner = CalcBigGridState(&game->grid);
-  printf("Grid 2 state = %d\n", game->grid.grids[2].state);
-  if (game->winner > 0) {
+  CalcBigGridState(&game->grid);
+
+  for (int sg = 0; sg < 9; sg++) {
+    printf("%d ", game->grid.grids[sg].state);
+  }
+  printf("\n");
+
+  if (game->grid.state > 0) {
+    printf("Winner = %d\n", game->grid.state);
     for (int c_idx =0; c_idx < PLAYERS_MAX; c_idx++) {
       game->clients[c_idx]->state = CS_EMPTY;
     }
@@ -376,7 +346,6 @@ int main() {
 
           for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
             packet.turn = game->turn^c_idx;
-            printf("For c_idx: %d turn = %d\n", c_idx, packet.turn);
             memcpy(&send_buf, &packet, sizeof(packet));
 
             printf("send connecting packet to FD: %d\n", game->clients[c_idx]->sock);
@@ -403,7 +372,7 @@ int main() {
           memset(cl, 0, sizeof(*cl));
         } else {
           printf("Received from fd %d: ", cl->sock);
-          for (int b = 0; b < bytes_read; b++) printf(" %02x", buf[b]);
+          // for (int b = 0; b < bytes_read; b++) printf(" %02x", buf[b]);
           printf("\n");
           switch (cl->state) {
             case CS_EMPTY:
@@ -437,5 +406,5 @@ int main() {
       }
     }
   }
-  close(server_sock);
+  ServerShutdown();
 };

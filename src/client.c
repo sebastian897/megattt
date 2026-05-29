@@ -100,7 +100,6 @@ bool DetectClickInArea(BigGrid* grid, Rectangle game_area_rect, Vector2 selected
 
 void OnMouseClick(BigGrid* grid, Rectangle game_area_rect, int* turn_area) {
   if (!IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) return;
-  printf("CLicked\n");
   Vector2 selected_pos =
       Vector2Subtract(GetMousePosition(), (Vector2){game_area_rect.x, game_area_rect.y});
   float big_grid_line_thickness = game_area_rect.height / 50;
@@ -192,9 +191,34 @@ void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
     *g_state = EXIT;
 }
 
+void RenderGameOver(Vector2 window_size, CellState winner, PlayerState *game_state) {
+  Vector2 pop_up_size = Vector2Scale(window_size, 0.40);
+  Rectangle pop_up = {(window_size.x-pop_up_size.x)/2, (window_size.y-pop_up_size.y)/2, pop_up_size.x, pop_up_size.y};
+  DrawRectangleRec(pop_up, GRAY);
+
+  const char* msg = winner == CELL_X   ? "X wins!"
+                    : winner == CELL_O ? "O wins!"
+                                       : "Draw!";
+  DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, WHITE);
+
+  Vector2 menu_button_size = {pop_up.width/3, pop_up.height/5};
+  float menu_button_padding = pop_up_size.y*0.05;
+  Rectangle menu_button = {pop_up.x + (pop_up.width-menu_button_size.x)/2, pop_up.y + pop_up.height - menu_button_size.y - menu_button_padding, menu_button_size.x, menu_button_size.y};
+  if (GuiButton(menu_button, "Menu?"))
+    *game_state = MENU;
+}
+
 void RenderConnecting(Vector2 window_size) {
   const char* msg = "Finding Game...";
   DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, WHITE);
+}
+
+void DrawMenuPopUpButton(Vector2 window_size, bool *menu_active) {
+  Vector2 pop_up_button_size = {window_size.y*0.05, window_size.y*0.05};
+  Rectangle pop_up_button = {window_size.x-pop_up_button_size.x, window_size.y-pop_up_button_size.y, pop_up_button_size.x, pop_up_button_size.y};
+  if (GuiButton(pop_up_button, "M")) {
+    *menu_active = !*menu_active;
+  }
 }
 
 void HandlePacketData(PlayerState *game_state, BigGrid* grid, int* turn_area, bool *turn) {
@@ -207,7 +231,7 @@ void HandlePacketData(PlayerState *game_state, BigGrid* grid, int* turn_area, bo
       *grid = packet.grid;
       *turn_area = packet.turn_area;
       *turn = packet.turn;
-      printf("Connecting: Turn = %d\n", *turn);
+      // printf("Connecting: Turn = %d\n", *turn);
     }
   }
 }
@@ -224,8 +248,9 @@ int main(void) {
   BigGrid grid = {0};
   bool turn;
   int turn_area = -1;
-  PlayerState game_state = MENU;
+  PlayerState game_state = GAME_OVER;
   SetTargetFPS(60);
+  bool menu_active = false;
   while (!WindowShouldClose() && game_state != EXIT) {
     switch (game_state) {
       case MENU:
@@ -250,14 +275,19 @@ int main(void) {
         DrawIndicator(turn, window_size);
         EndDrawing();
         HandlePacketData(&game_state, &grid, &turn_area, &turn);
+        if (grid.state > 0) {
+          game_state = GAME_OVER;
+          menu_active = true;
+        }
         break;
       case GAME_OVER:
+        ClearBackground(WHITE);
         BeginDrawing();
-        // const char* msg = CalcBigGridState(&grid) == CELL_X   ? "X wins!"
-        //                   : CalcBigGridState(&grid) == CELL_O ? "O wins!"
-        //                                                       : "";
-        // DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60,
-        // GOLD);
+        DrawTurns(&grid, game_area_rect);
+        DrawGameArea(&grid, game_area_rect, turn_area);
+        DrawMenuPopUpButton(window_size, &menu_active);
+        if (menu_active)
+          RenderGameOver(window_size, grid.state, &game_state);
         EndDrawing();
         break;
       case EXIT:

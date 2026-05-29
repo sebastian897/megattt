@@ -21,6 +21,7 @@ typedef struct SmallGrid {
 
 typedef struct BigGrid {
   SmallGrid grids[9];
+  CellState state;
 } BigGrid;
 
 typedef struct PlayerMove {
