@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install dependencies
         run: |
@@ -44,13 +44,13 @@ jobs:
           file build/megattt-server
 
       - name: Upload megattt
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: megattt-ubuntu24
           path: build/megattt
 
       - name: Upload megattt-server
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: megattt-server-ubuntu24
           path: build/megattt-server
