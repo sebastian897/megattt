@@ -121,7 +121,7 @@ void CalcBigGridState(BigGrid* grid) {
   }
   for (int player = 0; player < 2; player++) {
     for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if (player_pattern[player] == cell_patterns[pat]) {
+      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
         grid->state = player + 1;
       }
     }
@@ -145,7 +145,7 @@ void CalcSmallGridState(SmallGrid* grid) {
   }
   for (int player = 0; player < 2; player++) {
     for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if (grid->state == CELL_EMPTY && player_pattern[player] == cell_patterns[pat]) {
+      if (grid->state == CELL_EMPTY && (player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
         grid->state = player + 1;
       }
     }
