@@ -47,7 +47,7 @@ void DrawGameArea(BigGrid* grid, Rectangle game_area_rect, int turn_area) {
                       small_grid_size, small_grid_size};
       if ((turn_area >= 0 && turn_area != b_row * 3 + b_col) ||
           (turn_area < 0 && grid->grids[b_row * 3 + b_col].state != CELL_EMPTY)) {
-        DrawRectangleRec(small_grid_rect, ColorAlpha(BLACK, 0.2));
+        DrawRectangleRec(small_grid_rect, ColorAlpha(BLACK, 0.35));
       }
       small_grid_rect = scale_rect(small_grid_rect, 0.9);
       DrawTTTShape(small_grid_rect);
@@ -170,7 +170,7 @@ void DrawIndicator(bool turn, Vector2 window_size) {
   if (!turn) return;
   float padding = window_size.y * 0.005;
   float radius = window_size.y * 0.01;
-  DrawCircle(window_size.x - radius - padding, 0 + radius + padding, radius, ColorAlpha(RED, 0.6));
+  DrawCircle(window_size.x - radius - padding, 0 + radius + padding, radius, ColorAlpha(RED, 0.5));
 }
 
 void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
@@ -179,8 +179,7 @@ void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
 
   if (GuiButton((Rectangle){padding, window_size.y * 109 / 360, button_size.x, button_size.y},
                 "Play")) {
-    char msg[] = "Seb";
-    connect_packet packet = {PASSWORD, msg};
+    connect_packet packet = {PASSWORD, "Seb"};
     char buf[BUFLEN];
     memcpy(buf, &packet, sizeof(packet));
     Send(buf, sizeof(packet));

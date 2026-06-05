@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SERVER "192.168.40.85"
-#define SERVER_BIND "192.168.40.85"
+#define SERVER "192.168.40.163"
+#define SERVER_BIND "192.168.40.163"
 #define PORT 5150
 #define BUFLEN 1024
 #define PLAYERS_MAX 2
@@ -45,5 +45,5 @@ typedef struct game_packet {
 
 typedef struct connect_packet {
   int password;
-  char* name;
+  char name[16];
 } connect_packet;

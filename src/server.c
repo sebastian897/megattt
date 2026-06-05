@@ -176,10 +176,10 @@ void CalcPlayerMove(Game* game, PlayerMove move) {
   CalcSmallGridState(&game->grid.grids[move.big_grid_idx]);
   CalcBigGridState(&game->grid);
 
-  for (int sg = 0; sg < 9; sg++) {
-    printf("%d ", game->grid.grids[sg].state);
-  }
-  printf("\n");
+  // for (int sg = 0; sg < 9; sg++) {
+  //   printf("%d ", game->grid.grids[sg].state);
+  // }
+  // printf("\n");
 
   if (game->grid.state > 0) {
     printf("Winner = %d\n", game->grid.state);
@@ -369,9 +369,7 @@ int main() {
             memset(game->clients[c_idx], 0, sizeof(*cl));
           }
         } else {
-          printf("Received from fd %d: ", (int)cl->sock);
-          // for (int b = 0; b < bytes_read; b++) printf(" %02x", buf[b]);
-          printf("\n");
+          printf("Received from fd %d: \n", (int)cl->sock);
           switch (cl->state) {
             case CS_EMPTY:
               connect_packet c_packet;
@@ -379,9 +377,10 @@ int main() {
               if (c_packet.password == PASSWORD) {
                 strcpy(cl->name, c_packet.name);
                 cl->state = CS_POOL;
+                printf("Name: %s\n", cl->name);
                 AddToNewGame(games, cl);
               } else {
-                printf("Password didnt match IP: %d", (int)cl->sock);
+                printf("Password didnt match, FD: %d\n", (int)cl->sock);
                 closesocket(cl->sock);
               }
               break;
