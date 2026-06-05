@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 
 #include "common.h"
 #include "winsock_compat.h"
+
 
 #ifdef WIN32
 WSADATA wsa;

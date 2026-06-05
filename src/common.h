@@ -1,8 +1,10 @@
 #pragma once
+#include <stdbool.h>
 #include <stdint.h>
 
-#define SERVER "192.168.1.112"
-#define SERVER_BIND "192.168.1.112"
+
+#define SERVER "192.168.40.85"
+#define SERVER_BIND "192.168.40.85"
 #define PORT 5150
 #define BUFLEN 1024
 #define PLAYERS_MAX 2

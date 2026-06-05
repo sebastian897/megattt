@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -169,9 +168,9 @@ void DrawTurns(BigGrid* grid, Rectangle game_area_rect) {
 
 void DrawIndicator(bool turn, Vector2 window_size) {
   if (!turn) return;
-  float padding = window_size.y*0.005;
-  float radius = window_size.y*0.01;
-  DrawCircle(window_size.x-radius-padding, 0+radius+padding, radius, ColorAlpha(RED, 0.6));
+  float padding = window_size.y * 0.005;
+  float radius = window_size.y * 0.01;
+  DrawCircle(window_size.x - radius - padding, 0 + radius + padding, radius, ColorAlpha(RED, 0.6));
 }
 
 void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
@@ -191,21 +190,21 @@ void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
     *g_state = EXIT;
 }
 
-void RenderGameOver(Vector2 window_size, CellState winner, PlayerState *game_state) {
+void RenderGameOver(Vector2 window_size, CellState winner, PlayerState* game_state) {
   Vector2 pop_up_size = Vector2Scale(window_size, 0.40);
-  Rectangle pop_up = {(window_size.x-pop_up_size.x)/2, (window_size.y-pop_up_size.y)/2, pop_up_size.x, pop_up_size.y};
+  Rectangle pop_up = {(window_size.x - pop_up_size.x) / 2, (window_size.y - pop_up_size.y) / 2,
+                      pop_up_size.x, pop_up_size.y};
   DrawRectangleRec(pop_up, GRAY);
 
-  const char* msg = winner == CELL_X   ? "X wins!"
-                    : winner == CELL_O ? "O wins!"
-                                       : "Draw!";
+  const char* msg = winner == CELL_X ? "X wins!" : winner == CELL_O ? "O wins!" : "Draw!";
   DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, WHITE);
 
-  Vector2 menu_button_size = {pop_up.width/3, pop_up.height/5};
-  float menu_button_padding = pop_up_size.y*0.05;
-  Rectangle menu_button = {pop_up.x + (pop_up.width-menu_button_size.x)/2, pop_up.y + pop_up.height - menu_button_size.y - menu_button_padding, menu_button_size.x, menu_button_size.y};
-  if (GuiButton(menu_button, "Menu?"))
-    *game_state = MENU;
+  Vector2 menu_button_size = {pop_up.width / 3, pop_up.height / 5};
+  float menu_button_padding = pop_up_size.y * 0.05;
+  Rectangle menu_button = {pop_up.x + (pop_up.width - menu_button_size.x) / 2,
+                           pop_up.y + pop_up.height - menu_button_size.y - menu_button_padding,
+                           menu_button_size.x, menu_button_size.y};
+  if (GuiButton(menu_button, "Menu?")) *game_state = MENU;
 }
 
 void RenderConnecting(Vector2 window_size) {
@@ -213,15 +212,17 @@ void RenderConnecting(Vector2 window_size) {
   DrawText(msg, (window_size.x - MeasureText(msg, 60)) / 2, window_size.y / 2 - 30, 60, WHITE);
 }
 
-void DrawMenuPopUpButton(Vector2 window_size, bool *menu_active) {
-  Vector2 pop_up_button_size = {window_size.y*0.05, window_size.y*0.05};
-  Rectangle pop_up_button = {window_size.x-pop_up_button_size.x, window_size.y-pop_up_button_size.y, pop_up_button_size.x, pop_up_button_size.y};
+void DrawMenuPopUpButton(Vector2 window_size, bool* menu_active) {
+  Vector2 pop_up_button_size = {window_size.y * 0.05, window_size.y * 0.05};
+  Rectangle pop_up_button = {window_size.x - pop_up_button_size.x,
+                             window_size.y - pop_up_button_size.y, pop_up_button_size.x,
+                             pop_up_button_size.y};
   if (GuiButton(pop_up_button, "M")) {
     *menu_active = !*menu_active;
   }
 }
 
-void HandlePacketData(PlayerState *game_state, BigGrid* grid, int* turn_area, bool *turn) {
+void HandlePacketData(PlayerState* game_state, BigGrid* grid, int* turn_area, bool* turn) {
   char rec_buf[BUFLEN];
   if (ClientReceive(rec_buf)) {
     game_packet packet = {0};
@@ -286,8 +287,7 @@ int main(void) {
         DrawTurns(&grid, game_area_rect);
         DrawGameArea(&grid, game_area_rect, turn_area);
         DrawMenuPopUpButton(window_size, &menu_active);
-        if (menu_active)
-          RenderGameOver(window_size, grid.state, &game_state);
+        if (menu_active) RenderGameOver(window_size, grid.state, &game_state);
         EndDrawing();
         break;
       case EXIT:

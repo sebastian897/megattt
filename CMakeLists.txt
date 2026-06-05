@@ -14,6 +14,12 @@ function(setup_target_warnings_and_sanitizers target)
   target_link_options(${target} PRIVATE ${SANITIZER_EXPR})
 endfunction()
 
+function(opt_link_winsock target)
+  if(WIN32)
+    target_link_libraries(${target} PRIVATE ws2_32)
+  endif()
+endfunction()
+
 # fetch an compile raylib
 include(FetchContent)
 
@@ -43,11 +49,13 @@ add_executable(megattt
 )
 target_link_libraries(megattt PRIVATE raylib raygui)
 setup_target_warnings_and_sanitizers(megattt)
+opt_link_winsock(megattt)
 
 add_executable(megattt-server
   src/server.c
   src/buffer_control.c
 )
 setup_target_warnings_and_sanitizers(megattt-server)
+opt_link_winsock(megattt-server)
 
 
