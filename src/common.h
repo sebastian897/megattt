@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
 #define SERVER "192.168.40.85"
 #define SERVER_BIND "192.168.40.85"
 #define PORT 5150

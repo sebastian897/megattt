@@ -52,7 +52,7 @@ void ServerInit(void) {
     exit(1);
   }
 
-  bool opt = true;
+  int opt = 1;
   if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt)) < 0) {
     perror("setsockopt");
     close(server_sock);
@@ -261,9 +261,11 @@ void RemoveClFromItsGame(client* cl) {
 
 void ShuffleClients(Game* game) {
   uint8_t rnd_player = rand() & 1;
-  client* temp = game->clients[1 ^ rnd_player];
-  game->clients[1 ^ rnd_player] = game->clients[rnd_player];
-  game->clients[rnd_player] = temp;
+  if (rnd_player == 1) {
+    client* temp = game->clients[1];
+    game->clients[1] = game->clients[0];
+    game->clients[0] = temp;
+  }
 }
 
 int main() {
