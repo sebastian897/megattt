@@ -55,7 +55,7 @@ void ServerInit(void) {
   int opt = 1;
   if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt)) < 0) {
     perror("setsockopt");
-    close(server_sock);
+    closesocket(server_sock);
     exit(EXIT_FAILURE);
   }
 
@@ -86,7 +86,7 @@ void ServerInit(void) {
   // Start listening
   if (listen(server_sock, 100) < 0) {
     perror("listen failed");
-    close(server_sock);
+    closesocket(server_sock);
     exit(EXIT_FAILURE);
   }
 }
@@ -364,22 +364,26 @@ int main() {
         if (bytes_read <= 0) {
           printf("Client disconnected: FD %d Bytes Read: %d\n", (int)cl->sock, bytes_read);
 
-          close(cl->sock);
-          if (cl->game != NULL) {
-            for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
-              RemoveClFromItsGame(cl->game->clients[c_idx]);
-            }
+          for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
+            closesocket(game->clients[c_idx]->sock);
+            memset(game->clients[c_idx], 0, sizeof(*cl));
           }
-          memset(cl, 0, sizeof(*cl));
         } else {
           printf("Received from fd %d: ", (int)cl->sock);
           // for (int b = 0; b < bytes_read; b++) printf(" %02x", buf[b]);
           printf("\n");
           switch (cl->state) {
             case CS_EMPTY:
-              strncpy(cl->name, buf, sizeof(cl->name));
-              cl->state = CS_POOL;
-              AddToNewGame(games, cl);
+              connect_packet c_packet;
+              memcpy(&c_packet, buf, sizeof(c_packet));
+              if (c_packet.password == PASSWORD) {
+                strcpy(cl->name, c_packet.name);
+                cl->state = CS_POOL;
+                AddToNewGame(games, cl);
+              } else {
+                printf("Password didnt match IP: %d", (int)cl->sock);
+                closesocket(cl->sock);
+              }
               break;
             case CS_POOL:
               // player sending when in pool?
@@ -393,11 +397,11 @@ int main() {
               // player move;
               printf("Server: Sending game packet to game clients: ");
               char send_buf[BUFLEN] = {0};
-              game_packet packet = MakePacket(game);
+              game_packet g_packet = MakePacket(game);
               for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
-                packet.turn = game->turn ^ c_idx;
-                memcpy(&send_buf, &packet, sizeof(packet));
-                if (send(game->clients[c_idx]->sock, send_buf, sizeof(packet), 0) < 0) {
+                g_packet.turn = game->turn ^ c_idx;
+                memcpy(&send_buf, &g_packet, sizeof(g_packet));
+                if (send(game->clients[c_idx]->sock, send_buf, sizeof(g_packet), 0) < 0) {
                   perror("Send failed");
                 };
               }

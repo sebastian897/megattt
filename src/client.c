@@ -179,8 +179,11 @@ void RenderMenu(PlayerState* g_state, const Vector2 window_size) {
 
   if (GuiButton((Rectangle){padding, window_size.y * 109 / 360, button_size.x, button_size.y},
                 "Play")) {
-    const char msg[] = "Seb";
-    Send(msg, sizeof(msg));
+    char msg[] = "Seb";
+    connect_packet packet = {PASSWORD, msg};
+    char buf[BUFLEN];
+    memcpy(buf, &packet, sizeof(packet));
+    Send(buf, sizeof(packet));
 
     *g_state = CONNECTING;
   }

@@ -7,6 +7,7 @@
 #define PORT 5150
 #define BUFLEN 1024
 #define PLAYERS_MAX 2
+#define PASSWORD 6230
 
 typedef enum PlayerState { MENU, CONNECTING, PLAYING, GAME_OVER, EXIT } PlayerState;
 
@@ -41,3 +42,8 @@ typedef struct game_packet {
   int turn_area;
   bool turn;
 } game_packet;
+
+typedef struct connect_packet {
+  int password;
+  char* name;
+} connect_packet;

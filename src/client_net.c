@@ -8,7 +8,6 @@
 #include "common.h"
 #include "winsock_compat.h"
 
-
 #ifdef WIN32
 WSADATA wsa;
 #endif
@@ -46,7 +45,7 @@ void ClientInit(void) {
   server_adr.sin_addr.s_addr = inet_addr(SERVER);
 
   if (connect(sock, (struct sockaddr*)&server_adr, sizeof(server_adr)) < 0) {
-    perror("connect");
+    printf("Client: connect() failed: %d\n", WSAGetLastError());
     exit(1);
   }
 }
@@ -80,7 +79,7 @@ bool ClientReceive(char* buf) {
   int select_rv = select(sock + 1, &readfds, NULL, NULL, &tv);
 
   if (select_rv < 0) {
-    perror("select");
+    printf("Client: select() failed: %d\n", WSAGetLastError());
     return false;
   }
 
@@ -88,7 +87,7 @@ bool ClientReceive(char* buf) {
     int bytes_received = recv(sock, buf, BUFLEN, 0);
 
     if (bytes_received < 0) {
-      perror("recv");
+      printf("Client: recv() failed: %d\n", WSAGetLastError());
       return false;
     }
 
