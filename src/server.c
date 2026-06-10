@@ -400,7 +400,7 @@ int main() {
                      move.big_grid_idx, move.small_grid_idx);
               CalcPlayerMove(game, move);
               // player move;
-              printf("Server: Sending game packet to game clients: ");
+              printf("Server: Sending game packet to game clients: \n");
               char send_buf[BUFLEN] = {0};
               game_packet g_packet = MakePacket(game);
               for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
