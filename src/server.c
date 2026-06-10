@@ -364,9 +364,14 @@ int main() {
         if (bytes_read <= 0) {
           printf("Client disconnected: FD %d Bytes Read: %d\n", (int)cl->sock, bytes_read);
 
-          for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
-            closesocket(game->clients[c_idx]->sock);
-            memset(game->clients[c_idx], 0, sizeof(*cl));
+          if (game) {
+            for (int c_idx = 0; c_idx < PLAYERS_MAX; c_idx++) {
+              closesocket(game->clients[c_idx]->sock);
+              memset(game->clients[c_idx], 0, sizeof(*cl));
+            }
+          } else {
+            closesocket(cl->sock);
+            memset(cl, 0, sizeof(*cl));
           }
         } else {
           printf("Received from fd %d: \n", (int)cl->sock);
@@ -375,7 +380,8 @@ int main() {
               connect_packet c_packet;
               memcpy(&c_packet, buf, sizeof(c_packet));
               if (c_packet.password == PASSWORD) {
-                strcpy(cl->name, c_packet.name);
+                strncpy(cl->name, c_packet.name, sizeof(cl->name) - 1);
+                cl->name[sizeof(cl->name) - 1] = '\0';  // Ensure null termination
                 cl->state = CS_POOL;
                 printf("Name: %s\n", cl->name);
                 AddToNewGame(games, cl);

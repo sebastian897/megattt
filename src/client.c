@@ -13,6 +13,8 @@
 #include "raygui.h"
 #include "raymath.h"
 
+char server_ip[20] = SERVER;
+
 Rectangle scale_rect(Rectangle rect, float scale) {
   float new_width = rect.width * scale;
   float new_height = rect.height * scale;
@@ -239,8 +241,21 @@ void HandlePacketData(PlayerState* game_state, BigGrid* grid, int* turn_area, bo
   }
 }
 
-int main(void) {
-  ClientInit();
+int main(int argc, char* argv[]) {
+  int opt;
+
+  while ((opt = getopt(argc, argv, "s:")) != -1) {
+    switch (opt) {
+      case 's':
+        strncpy(server_ip, optarg, sizeof(server_ip) - 1);
+        server_ip[sizeof(server_ip) - 1] = '\0';  // Ensure null termination
+        printf("server_ip = %s\n", server_ip);
+        break;
+    }
+  }
+  // exit(0);
+
+  ClientInit(server_ip);
 
   // exit(0);
   InitWindow(800, 800, "MegaTicTacToe");

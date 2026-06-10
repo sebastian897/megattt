@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define SERVER "192.168.40.163"
-#define SERVER_BIND "192.168.40.163"
+#define SERVER "127.0.0.1"
+#define SERVER_BIND "0.0.0.0"
 #define PORT 5150
 #define BUFLEN 1024
 #define PLAYERS_MAX 2

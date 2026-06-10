@@ -19,7 +19,7 @@ static struct sockaddr_in server_adr;
 // static socklen_t slen = sizeof(server_adr);
 // #endif
 
-void ClientInit(void) {
+void ClientInit(const char* server_ip) {
 #ifdef WIN32
   // Initialize Winsock
   if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -42,7 +42,7 @@ void ClientInit(void) {
   memset(&server_adr, 0, sizeof(server_adr));
   server_adr.sin_family = AF_INET;
   server_adr.sin_port = htons(PORT);
-  server_adr.sin_addr.s_addr = inet_addr(SERVER);
+  server_adr.sin_addr.s_addr = inet_addr(server_ip);
 
   if (connect(sock, (struct sockaddr*)&server_adr, sizeof(server_adr)) < 0) {
     printf("Client: connect() failed: %d\n", WSAGetLastError());
