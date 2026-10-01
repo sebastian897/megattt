@@ -8,11 +8,8 @@
 
 #include "buffer_control.h"
 #include "common.h"
+#include "solver.h"
 #include "winsock_compat.h"
-
-#define ARRAY_LENGTH(x) ((int)(sizeof(x) / sizeof((x)[0])))
-
-static const uint16_t cell_patterns[] = {7, 56, 448, 73, 146, 292, 273, 84};
 
 #define MAX_CLIENTS 128
 
@@ -96,55 +93,6 @@ void ServerShutdown(void) {
 #ifdef WIN32
   WSACleanup();
 #endif
-}
-
-void CalcBigGridState(BigGrid* grid) {
-  uint16_t player_pattern[2] = {0, 0};
-  uint8_t player_count[2] = {0};
-  for (int c = 0; c < 9; c++) {
-    if (grid->grids[c].state == CELL_X) {
-      player_pattern[0] += 1 << c;
-      player_count[0] += 1;
-    } else if (grid->grids[c].state == CELL_O) {
-      player_pattern[1] += 1 << c;
-      player_count[1] += 1;
-    }
-  }
-  for (int player = 0; player < 2; player++) {
-    for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if ((player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
-        grid->state = player + 1;
-      }
-    }
-  }
-  if (player_count[0] + player_count[1] == 9) {
-    grid->state = CELL_DRAW;
-  }
-}
-
-void CalcSmallGridState(SmallGrid* grid) {
-  uint16_t player_pattern[2] = {0, 0};
-  uint8_t player_count[2] = {0};
-  for (int c = 0; c < 9; c++) {
-    if (grid->cells[c].state == CELL_X) {  // idx into with state
-      player_pattern[0] += 1 << c;
-      player_count[0] += 1;
-    } else if (grid->cells[c].state == CELL_O) {
-      player_pattern[1] += 1 << c;
-      player_count[1] += 1;
-    }
-  }
-  for (int player = 0; player < 2; player++) {
-    for (int pat = 0; pat < ARRAY_LENGTH(cell_patterns); pat++) {
-      if (grid->state == CELL_EMPTY &&
-          (player_pattern[player] & cell_patterns[pat]) == cell_patterns[pat]) {
-        grid->state = player + 1;
-      }
-    }
-  }
-  if (grid->state == CELL_EMPTY && player_count[0] + player_count[1] == 9) {
-    grid->state = CELL_DRAW;
-  }
 }
 
 typedef enum client_state {

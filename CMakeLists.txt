@@ -46,6 +46,7 @@ add_executable(megattt
   src/client.c
   src/client_net.c
   src/raygui_impl.c
+  src/solver.c
 )
 target_link_libraries(megattt PRIVATE raylib raygui)
 setup_target_warnings_and_sanitizers(megattt)
@@ -54,6 +55,7 @@ opt_link_winsock(megattt)
 add_executable(megattt-server
   src/server.c
   src/buffer_control.c
+  src/solver.c
 )
 setup_target_warnings_and_sanitizers(megattt-server)
 opt_link_winsock(megattt-server)

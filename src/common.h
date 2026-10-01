@@ -8,17 +8,20 @@
 #define BUFLEN 1024
 #define PLAYERS_MAX 2
 #define PASSWORD 6230
+#define ARRAY_LENGTH(x) ((int)(sizeof(x) / sizeof((x)[0])))
 
 typedef enum PlayerState { MENU, CONNECTING, PLAYING, GAME_OVER, EXIT } PlayerState;
 
 typedef enum CellState { CELL_EMPTY, CELL_X, CELL_O, CELL_DRAW } CellState;
 typedef struct Cell {
   CellState state;
+  int FutureValue;
 } Cell;
 
 typedef struct SmallGrid {
   Cell cells[9];
   CellState state;
+  int FutureValue;
 } SmallGrid;
 
 typedef struct BigGrid {
